@@ -10,9 +10,9 @@
 #### 3.快速开发  
 #### 4.在线管理（素材、数据、接口、服务）  
 
-</br>
-![image](https://github.com/AngelSXD/sxd_first_repository/blob/master/images/20160615165142.png)
-</br>
+
+![image](https://github.com/jingqimao/NaughtyNode/blob/master/preview.jpg)  
+
 
 ###  如何快速使用  
 
