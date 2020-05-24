@@ -1,0 +1,91 @@
+[
+	{
+		"name": "监控台",
+		"to": "console",
+		"icon": "md-speedometer",
+		"children": []
+	},
+	{
+		"name": "内容",
+		"to": "content",
+		"icon": "ios-folder",
+		"children": [
+			{
+			  "name": "访问路径",
+			  "to": "urlmap"
+			},
+			{
+			  "name": "静态素材",
+			  "to": "material"
+			},
+			{
+			  "name": "文件管理",
+			  "to": "file"
+			}
+		 
+		]
+	},
+	{
+		"name": "业务",
+		"to": "business",
+		"icon": "logo-buffer",
+		"children": [
+			{
+			  "name": "用户管理",
+			  "to": "user"
+			},{
+			  "name": "消息中心",
+			  "to": "message"
+			}
+		]
+	},
+	{
+		"name": "数据",
+		"to": "data",
+		"icon": "logo-buffer",
+		"children": [
+			{
+			  "name": "数据库",
+			  "to": "db"
+			},
+			{
+			  "name": "数据监控",
+			  "to": "sql"
+			}
+		 
+		]
+	},
+	{
+		"name": "接口管理",
+		"to": "api",
+		"icon": "ios-cloud",
+		"children": []
+	},
+	{
+		"name": "系统",
+		"to": "sys",
+		"icon": "ios-settings",
+		"children": [
+			{
+			  "name": "权限角色",
+			  "to": "role"
+			},
+			{
+			  "name": "管理员",
+			  "to": "manager"
+			},
+			{
+			  "name": "系统任务",
+			  "to": "task"
+			},
+			{
+			  "name": "系统设置",
+			  "to": "setting"
+			},
+			{
+			  "name": "系统日志",
+			  "to": "log"
+			}
+		]
+	}
+]

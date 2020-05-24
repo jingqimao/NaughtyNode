@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="/static/js/jquery-3.3.1.min.js"></script>
+	<script src="/static/js/wheel_utils.js"></script>
+	<script src="/static/js/vue.min.js"></script>
+	<link rel="stylesheet" href="/static/iview2/styles/iview.css">
+	<script src="/static/iview2/iview.min.js"></script>
+	
+	<style>
+		#app{
+			padding:20px;
+		}
+		.ivu-poptip-body{
+			text-align: left;
+		}
+	</style>
+</head>
+<body>
+	<div id="app">
+		<template>
+			<i-table :columns="columns" :data="logs">
+				<template slot-scope="{ row, index }" slot="action">
+					<i-Button icon="ios-search" @click="look(index)">查看</i-Button>
+				</template>
+			</i-table>
+        </template>
+		<Modal v-model="look_box" title="查看日志" fullscreen footer-hide>
+			<i-input type="textarea" v-model="log_content" placeholder="" readonly autosize></i-input>
+		</Modal>
+    </div>
+</body>
+<script type="text/javascript">
+	var vue = new Vue({
+		el: '#app',
+		data: {
+			logs:[],
+			columns:[
+				{
+					title: '日志',
+					key: 'name'
+				},
+				{
+					title: '大小',
+					key: 'size'
+				},
+				{
+					title: '操作',
+					slot: 'action',
+					width: 150,
+					align: 'center'
+				}
+			],
+			look_box:false,
+			log_content:''
+		},
+		mounted() {
+			this.update();
+		},
+		methods: {
+			update(){
+				let res=wt.get('/sys/sys/get_logs_list');
+				for(let i in res.children){
+					this.logs.push({
+						name:res.children[i].name,
+						size:res.children[i].size
+					});
+				}
+				this.logs.reverse();
+			},
+			look(index){
+				this.log_content=wt.get('/sys/sys/look_log',{name:this.logs[index].name});
+				this.look_box=true;
+			}
+        }
+	});
+</script>
+</html>

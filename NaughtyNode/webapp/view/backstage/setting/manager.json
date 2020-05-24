@@ -1,0 +1,25 @@
+[
+	{
+		"account": "test",
+		"password": "123",
+		"name": "管理员",
+		"mail": "1014351430@qq.com",
+		"role": [
+			"manager"
+		],
+		"time": "2020-05-21 14:57:47",
+		"last_time": "2020-05-16 11:38:50"
+	},
+	{
+		"account": "admin",
+		"password": "123",
+		"name": "超级管理员",
+		"mail": "1014351430@qq.com",
+		"role": [
+			"manager",
+			"super_manager"
+		],
+		"time": "2020-05-21 14:58:53",
+		"last_time": ""
+	}
+]

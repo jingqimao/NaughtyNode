@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="/static/js/jquery-3.3.1.min.js"></script>
+	<script src="/static/js/wheel_utils.js"></script>
+	<script src="/static/js/vue.min.js"></script>
+	<link rel="stylesheet" href="/static/iview2/styles/iview.css">
+	<script src="/static/iview2/iview.min.js"></script>
+	<script src="/static/js/md5.min.js"></script>
+	
+	<style>
+		#app{
+			padding:20px;
+		}
+		.ivu-poptip-body{
+			text-align: left;
+		}
+		
+		.ivu-list{
+			margin: 20px;
+		}
+		.ivu-list .ivu-list-item{
+			padding: 12px 10px;
+			transition: all 0.3s;
+			cursor: pointer;
+		}
+		.ivu-list .ivu-list-item:hover{
+			background: #f1f1f1;
+		}
+	</style>
+</head>
+<body>
+	<div id="app">
+		<i-button v-if="sys_message.db==''" icon="md-cube" @click="initSysMessage">初始化消息中心</i-button>
+		<template v-if="sys_message.db!=''">
+			 <Tabs :animated="false">
+				<Tab-Pane label="今日消息">
+					<List>
+						<List-Item v-for="item in show_data.today.data" @dblclick.native="preview_data=item;preview_box=true;">
+							<List-Item-Meta :title="item.title" :description="item.content" ></List-Item-Meta>
+							<template slot="action">
+								<i-Button icon="ios-search" @click="preview_data=item;preview_box=true;">查看</i-Button>
+							</template>
+						</List-Item>
+					</List>
+					<Page v-if="show_data.today.total>10" :total="show_data.today.total" @on-change="(e)=>{changePage(e,'today')}" style="text-align: center;margin-top: 20px;"/>
+				</Tab-Pane>
+				<Tab-Pane label="通知">
+					<List>
+						<List-Item v-for="item in show_data.notice.data" @dblclick.native="preview_data=item;preview_box=true;">
+							<List-Item-Meta :title="item.title" :description="item.content" ></List-Item-Meta>
+							<template slot="action">
+								<i-Button icon="ios-search" @click="preview_data=item;preview_box=true;">查看</i-Button>
+							</template>
+						</List-Item>
+					</List>
+					<Page v-if="show_data.notice.total>10" :total="show_data.notice.total" @on-change="(e)=>{changePage(e,'notice')}" style="text-align: center;margin-top: 20px;"/>
+				</Tab-Pane>
+				<Tab-Pane label="留言">
+					<List>
+						<List-Item v-for="item in show_data.message.data" @dblclick.native="preview_data=item;preview_box=true;">
+							<List-Item-Meta :title="item.title" :description="item.content" ></List-Item-Meta>
+							<template slot="action">
+								<i-Button icon="ios-search" @click="preview_data=item;preview_box=true;">查看</i-Button>
+							</template>
+						</List-Item>
+					</List>
+					<Page v-if="show_data.message.total>10" :total="show_data.message.total" @on-change="(e)=>{changePage(e,'message')}" style="text-align: center;margin-top: 20px;"/>
+				</Tab-Pane>
+				<Tab-Pane label="举报">
+					<List>
+						<List-Item v-for="item in show_data.report.data" @dblclick.native="preview_data=item;preview_box=true;">
+							<List-Item-Meta :title="item.title" :description="item.content" ></List-Item-Meta>
+							<template slot="action">
+								<i-Button icon="ios-search" @click="preview_data=item;preview_box=true;">查看</i-Button>
+							</template>
+						</List-Item>
+					</List>
+					<Page v-if="show_data.report.total>10" :total="show_data.report.total" @on-change="(e)=>{changePage(e,'report')}" style="text-align: center;margin-top: 20px;"/>
+				</Tab-Pane>
+				<Tab-Pane label="全部消息">
+					<List>
+						<List-Item v-for="item in show_data.all.data" @dblclick.native="preview_data=item;preview_box=true;">
+							<List-Item-Meta :title="item.title" :description="item.content" ></List-Item-Meta>
+							<template slot="action">
+								<i-Button icon="ios-search" @click="preview_data=item;preview_box=true;">查看</i-Button>
+							</template>
+						</List-Item>
+					</List>
+					<Page v-if="show_data.all.total>10" :total="show_data.all.total" @on-change="(e)=>{changePage(e,'all')}" style="text-align: center;margin-top: 20px;"/>
+				</Tab-Pane>
+			</Tabs>
+        </template>
+		<Modal v-model="init_sys_message_box" title="初始化消息中心" @on-ok="initSysMessageOk" @on-cancel="cancel">
+			<i-form :label-width="80">
+				<Form-Item label="数据库">
+					<i-Select v-model="init_sys_message_data.db" style="width:200px">
+						<i-Option v-for="db in db_list" :value="db">{{ db }}</Option>
+					</i-Select>
+				</Form-Item>
+				<Form-Item label="用户表">
+					<i-input type="text" v-model="init_sys_message_data.table" placeholder="输入英文名称" style="width:200px;"></i-input>
+				</Form-Item>
+			</i-form>
+		</Modal>
+		<Modal v-model="preview_box" title="查看消息" >
+			<p>{{preview_data.title}}</p>
+			<p>{{preview_data.content}}</p>
+		</Modal>
+    </div>
+</body>
+<script type="text/javascript">
+	var vue = new Vue({
+		el: '#app',
+		data: {
+			sys_message:{},
+			init_sys_message_box:false,
+			db_list:[],
+			init_sys_message_data:{
+				db:'',
+				table:''
+			},
+			show_data:{
+				today:{
+					data:[],
+					page:1,
+					total:0
+				},
+				notice:{
+					data:[],
+					page:1,
+					total:0
+				},
+				message:{
+					data:[],
+					page:1,
+					total:0
+				},
+				report:{
+					data:[],
+					page:1,
+					total:0
+				},
+				all:{
+					data:[],
+					page:1,
+					total:0
+				}
+			},
+			preview_box:false,
+			preview_data:{}
+		},
+		mounted() {
+			this.sys_message=wt.get("/sys/business/get_sys_business").sys_message;
+			
+			setTimeout(()=>{
+				this.updateData('today');
+			},300);
+			setTimeout(()=>{
+				this.updateData('notice');
+			},300);
+			setTimeout(()=>{
+				this.updateData('message');
+			},300);
+			setTimeout(()=>{
+				this.updateData('report');
+			},300);
+			setTimeout(()=>{
+				this.updateData('all');
+			},300);
+		},
+		methods: {
+			initSysMessage(){
+				let dbs=wt.get('/sys/db/get_dbs');
+				for(let i in dbs){
+					this.db_list.push(dbs[i].name);
+				}
+				if(this.db_list.length>0)this.init_sys_message_data.db=this.db_list[0];
+				this.init_sys_message_box=true;
+			},
+			initSysMessageOk(){
+				let res=wt.get('/sys/business/init_sys_message_table',{db:this.init_sys_message_data.db,table:this.init_sys_message_data.table});
+				if(res=='true'){
+					wt.reload();
+				}else{
+					this.$Message.error('初始化失败！因为表存在或其他问题');
+				}
+			},
+			cancel(){
+			},
+			updateData(type) {
+				if(this.sys_message.db!=''&&this.sys_message.table!=''){
+					let where='';
+					if(type=='today')where='where to_days(`time`) = to_days(now())';
+					if(type=='notice')where="where `type` = 'notice'";
+					if(type=='message')where="where `type` = 'message'";
+					if(type=='report')where="where `type` = 'report'";
+					let res=wt.get('/sys/business/get_sys_message_data',{
+						where:where,
+						page:this.show_data.all.page,
+						limit:10,
+						desc:true
+					});
+					if(type=='all'){
+						this.show_data.all.data=res.data;
+						this.show_data.all.total=res.total;
+					}
+					if(type=='today'){
+						this.show_data.today.data=res.data;
+						this.show_data.today.total=res.total;
+					}
+					if(type=='notice'){
+						this.show_data.notice.data=res.data;
+						this.show_data.notice.total=res.total;
+					}
+					if(type=='message'){
+						this.show_data.message.data=res.data;
+						this.show_data.message.total=res.total;
+					}
+					if(type=='report'){
+						this.show_data.report.data=res.data;
+						this.show_data.report.total=res.total;
+					}
+					
+				}
+			},
+			changePage(page,type){
+				if(type=='all')this.show_data.all.page=page;
+				if(type=='today')this.show_data.today.page=page;
+				if(type=='notice')this.show_data.notice.page=page;
+				if(type=='message')this.show_data.message.page=page;
+				if(type=='report')this.show_data.report.page=page;
+				this.updateData(type);
+			}
+        }
+	});
+</script>
+</html>

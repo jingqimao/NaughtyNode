@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="/static/js/jquery-3.3.1.min.js"></script>
+	<script src="/static/js/wheel_utils.js"></script>
+	<script src="/static/js/vue.min.js"></script>
+	<link rel="stylesheet" href="/static/iview2/styles/iview.css">
+	<script src="/static/iview2/iview.min.js"></script>
+	
+	<style>
+		body{
+			background: #f9f9fa;
+		}
+		#app{
+			padding:20px;
+			overflow: hidden;
+			background: #F9F9FA;
+		}
+		.ivu-poptip-body{
+			text-align: left;
+		}
+		
+		
+		.ov_num{
+			display: block;
+			text-align: center;
+			font-size: 30px;
+			line-height: 90px;
+			font-weight: bold;
+			color: #888888;
+		}
+		.ov_sz_item{
+			box-shadow: 0 0.5px 3px #bdbdbd;
+			margin: 10px;
+			border-radius: 6px;
+			overflow: hidden;
+			display: flex;
+			background: white;
+		}
+		.ov_sz_item .ov_sz_icon{
+			width: 35%;
+			background: #929292;
+			font-size: 40px;
+			color: white;
+			text-align: center;
+			line-height: 100px;
+		}
+		.ov_sz_item .ov_sz_val{
+			flex: auto;
+		}
+		.ov_sz_item .ov_sz_title{
+			text-align: center;
+			font-size: 14px;
+			line-height: 65px;
+			height: 50px;
+		}
+		.ov_sz_item .ov_sz_val .ov_num{
+			font-size: 40px;
+			font-weight: 100;
+			color: #676767;
+			height: 50px;
+			line-height: 80px;
+		}
+		.col_card{
+			margin: 8px;
+			padding: 8px;
+			background: white;
+			border-radius: 6px;
+			box-shadow: 1px 1px 3px #d8d8d8;
+		}
+		
+	</style>
+</head>
+<body>
+	<include src="/view/backstage/component/NumberGrow.html"></include>
+	<include src="/view/backstage/component/SqlChart.html"></include>
+	<div id="app">
+		<template>
+			<i-Col v-for="(item,index) in ops_list" v-if="item.console" :xs="item.size.xs" :sm="item.size.sm" :md="item.size.md" :lg="item.size.lg" :xl="item.size.xl" :xxl="item.size.xxl">
+				<div :class="item.type!='ov'?'col_card':''">
+					<template v-if="item.type=='ov'">
+						<div v-if="item.charts=='shuzhi'" style="width: 100%;height:370px;">
+							<i-Col v-for="(ops_item,index) in item.ops" :xs="24" :sm="24" :md="12" :lg="12">
+								<Card style="margin: 0 10px 10px 0px;height:180px;">
+									<p slot="title">
+										<Icon :type="ops_item.icon"></Icon>
+										<span>{{ops_item.title}}</span>
+									</p>
+									<p>
+										<span class="ov_num" :style="{color:ops_item.color}">
+											<number-grow :value="initSqlOvData(item,index)"></number-grow>
+										</span>
+									</p>
+								</Card>
+							</i-Col>
+						</div>
+						<div v-if="item.charts=='shuzhi2'" style="width: 100%;height:120px;">
+							<i-Col v-for="(ops_item,index) in item.ops" :xs="24" :sm="12" :md="4" :lg="4">
+								<div class="ov_sz_item">
+									<div class="ov_sz_icon" :style="{background:ops_item.color}">
+										<Icon :type="ops_item.icon"></Icon>
+									</div>
+									<div class="ov_sz_val">
+										<span class="ov_num">
+											<number-grow :value="initSqlOvData(item,index)"></number-grow>
+										</span>
+										<div class="ov_sz_title">{{ops_item.title}}</div>
+									</div>
+								</div>
+							</i-Col>
+						</div>
+					</template>
+					<sql-chart v-if="item.type=='sov'||item.type=='ssv'" :data="item" style="width: 100%;height:370px;"></sql-chart>
+				</div>
+			</i-Col>
+        </template>
+    </div>
+</body>
+<script type="text/javascript">
+	var vue = new Vue({
+		el: '#app',
+		data: {
+			dbs:[],
+			db_list:[],
+			ops_list:[]
+		},
+		mounted() {
+			this.dbs=wt.get('/sys/db/get_dbs');
+			for(let i in this.dbs){
+				this.db_list.push(this.dbs[i].name);
+			}
+			this.ops_list=wt.get('/sys/db/get_sql_card');
+		},
+		methods: {
+			initSqlOvData(item,index) {
+				if(item.type=='ov'&&item.ops[index].sql!=''){
+					let res=wt.get('/sys/db/get_sql_data',{db:item.ops[index].db,sql:item.ops[index].sql});
+					let data=res[0][item.ops[index].xkeys[0].key];
+					return data;
+				}
+			},
+			getSize(size,index){
+				return parseInt(size.split(',')[index]);
+			}
+        }
+	});
+</script>
+</html>

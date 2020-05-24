@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="/static/js/jquery.form.min.js"></script>
+	<script src="/static/tinymce/tinymce.min.js"></script>
+	<style>
+		.img_list{
+			display: inline-block;
+		}
+		.img_list .img_item{
+			width: 58px;
+			height: 58px;
+			border-radius: 3px;
+			overflow: hidden;
+			position: relative;
+		}
+		.img_list .ivu-icon{
+			font-size: 22px;
+			color: #ff5454;
+			position: absolute;
+			right: 0;
+			cursor: pointer;
+			opacity: 0;
+			transition: all 0.3s;
+		}
+		.img_item:hover .ivu-icon{
+			opacity: 1;
+		}
+		.img_list img{
+			width: 100%;
+			cursor: pointer;
+		}
+		.file_list{
+			display: inline-block;
+		}
+		.file_list span{
+			padding: 5px 8px;
+			border-radius: 3px;
+			transition: all 0.3s;
+		}
+		.file_list span:hover{
+			background: #efefef;
+		}
+		.file_list span .ivu-icon{
+			margin-left: 5px;
+			color: red;
+			cursor: pointer;
+			opacity: 0;
+			transition: all 0.3s;
+		}
+		.file_list span:hover .ivu-icon{
+			opacity: 1;
+		}
+	</style>
+</head>
+<body>
+	<template id="SomeInput">
+		<span>
+			<i-input v-if="type=='str'"
+				type="textarea" v-model="data" placeholder="输入字符串" autosize></i-input>
+			<i-Switch v-if="type=='bool'" v-model="data" size="large">
+				<span slot="open">开</span>
+				<span slot="close">关</span>
+			</i-Switch>
+			<Input-Number v-if="type=='num'"
+				:min="0" precision="0" style="" v-model="data"></Input-Number>
+			<i-button v-if="type=='html'"
+				icon="ios-list-box-outline" @click="editArticle">编辑文章</i-button>
+			<template v-if="type=='img'">
+				<Upload
+					:show-upload-list="false"
+					:on-success="uploadSuccess"
+					:format="['jpg','jpeg','png']"
+					:max-size="10240"
+					:on-format-error="handleFormatError"
+					:on-exceeded-size="imgMaxSize"
+					multiple
+					type="drag"
+					:action="upload_img"
+					style="display: inline-block;width:58px;">
+					<div style="width: 58px;height:58px;line-height: 58px;">
+						<Icon type="ios-camera" size="20"></Icon>
+					</div>
+				</Upload>
+				<div class="img_list">
+					<div v-if="typeof data=='string'&&data!=''" class="img_item">
+						<img :src="data" @click="visitImg(data)"/>
+						<Icon type="md-close" @click.native="removeImg"/>
+					</div>
+				</div>
+				
+				<Modal :title="visible_name" v-model="visible_box">
+					<img :src="visible_img" v-if="visible_box" style="width: 100%">
+				</Modal>
+			</template>
+			<template v-if="type=='file'">
+				<Upload 
+					:show-upload-list="false"
+					:action="upload_file"
+					:on-success="uploadSuccess"
+					:max-size="102400"
+					:on-exceeded-size="fileMaxSize"
+					style="display: inline-block;">
+					<i-button icon="ios-cloud-upload">上传文件</i-button>
+				</Upload>
+				<div class="file_list">
+					<span v-if="typeof data=='string'">{{data.split('_').length>1?data.split('_')[1]:data}}<Icon type="md-close" @click.native="removeImg"/></span>
+				</div>
+			</template>
+			<Modal
+				v-model="edit_article_box"
+				title="编辑文章"
+				width="800px"
+				@on-ok="editArticleOk">
+				<textarea id="tinymce"></textarea>
+			</Modal>
+		</span>
+	</template>
+</body>
+<script type="text/javascript">
+	Vue.component('some-input',{
+		template:"#SomeInput",
+		data() {
+			return {
+				edit_article_box:false,
+				visible_box:false,
+				visible_img:'',
+				visible_name:''
+			}
+		},
+        props:{
+			type:String,
+			data:Object,
+			upload_img:String,
+			upload_file:String
+		},
+		model:{
+			prop:'data',
+			event: 'change'
+		},
+		mounted () {
+			
+		},
+		methods: {
+			editArticle() {
+				let self=this;
+				tinymce.init({
+					selector:'#tinymce',
+					//plugins: 'print preview importcss searchreplace autosave save directionality visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern noneditable help charmap quickbars emoticons',
+					plugins:'fullscreen image link media table imagetools',
+					toolbar:'styleselect | fontsizeselect forecolor backcolor | link image media table | alignleft aligncenter alignright | fullscreen',
+					images_upload_handler:((blobInfo, success, failure)=>{
+						var form = new FormData();
+						form.append('files', blobInfo.blob(), blobInfo.filename());
+						$.ajax({
+							url: self.upload_img,
+							type: "post",
+							data: form,
+							processData: false,
+							contentType: false,
+							success: function(data) {
+								success(data);
+							},
+							error: function(e) {
+								self.$Message.error('上传失败！');
+							}
+				        });
+					}),
+					file_picker_callback:((callback, value, meta)=>{
+						var input = document.createElement('input');
+						input.setAttribute('type', 'file');
+						input.onchange = function() {
+							var file = this.files[0];
+							var form = new FormData();
+							form.append("files", file);
+							$.ajax({
+								url: self.upload_file,
+								type: "post",
+								data: form,
+								processData: false,
+								contentType: false,
+								success: function(data) {
+									callback(data);
+								},
+								error: function(e) {
+									self.$Message.error('上传失败！');
+								}
+							});
+						};
+						input.click();
+					}),
+					paste_data_images: true,
+					convert_urls: false,
+					height:400,
+					language:'zh_CN',
+					setup: (editor)=> {
+						editor.on('init', ()=>{
+							editor.setContent(this.data);
+							editor.on('input change undo redo', ()=>{
+								this.data = editor.getContent();
+							});
+						});
+					}
+				});
+				this.edit_article_box=true;
+			},
+			editArticleOk() {
+				
+			},
+			uploadSuccess(res,file,fileList){
+				this.data=res;
+				this.$forceUpdate();
+			},
+			handleFormatError (file) {
+                this.$Notice.warning({
+                    title: '文件不是图片格式',
+                    desc: '文件' + file.name + '格式不对,请选择 jpg 或 png！'
+                });
+            },
+            imgMaxSize (file) {
+                this.$Notice.warning({
+                    title: '图片过大',
+                    desc: '图片' + file.name + '太大，不能超过10M'
+                });
+            },
+            fileMaxSize (file) {
+                this.$Notice.warning({
+                    title: '文件过大',
+                    desc: '文件' + file.name + '太大，不能超过100M'
+                });
+            },
+			visitImg(url){
+				this.visible_name=url.split('_').length>1?url.split('_')[1]:url;
+				this.visible_img=url;
+				this.visible_box=true;
+			},
+			removeImg(){
+				this.data='';
+				this.$forceUpdate();
+			}
+		},
+		watch: {
+			data(n,o) {
+				this.$emit('change',n);
+			}
+		}
+    });
+</script>
+</html>
