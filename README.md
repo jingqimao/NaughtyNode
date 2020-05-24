@@ -3,7 +3,7 @@
 # NaughtyNode  
 
 ## 一个附带后台管理的半成品网络系统框架  
-### nodejs+vue+iview 
+### nodejs+vue+iview+（mysql/redis/mongodb）  
    
 #### 1.多平台  
 #### 2.超轻量  
