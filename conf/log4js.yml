@@ -1,0 +1,19 @@
+
+appenders: 
+    console:
+        type: console
+    logfile:
+        type: dateFile
+        filename: ./logs/server
+        pattern: yyyy-MM-dd.log
+        alwaysIncludePattern: true
+        maxLogSize: 5242880
+        backups: 3
+        encoding: utf-8
+
+categories:
+    default:
+        appenders:
+            - console
+            - logfile
+        level: info
