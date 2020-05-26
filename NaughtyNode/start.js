@@ -115,7 +115,10 @@ const sysArgs={
 		get:{},
 		post:{}
 	},
-	root:ROOT_PATH
+	root:ROOT_PATH,//根目录
+	global_response_data:{},//全局响应数据
+	response_data:{}//单次请求响应数据
+	
 }
 
 //添加替换
@@ -252,6 +255,8 @@ const logger=log4js.getLogger();
 //传递log4j到其他模块打印报错
 taskApp.log=logger;
 cfUtils.log=logger;
+htmlTemplate.log=logger;
+dbUtils.log=logger;
 
 
 //设置第三方API
@@ -339,7 +344,8 @@ sysArgs.sers['$']={
 	redis:redisUtils,
 	cloud:cloud,
 	cache:cacheUtils,
-	log:logger
+	log:logger,
+	global:sysArgs.global_response_data
 };
 
 //定时任务引用共享资源
@@ -502,6 +508,9 @@ async function filter(request,response){
 		}
 	}
 	
+	//初始化响应数据
+	sysArgs.response_data={};
+	
 	if(request.method === 'GET'){
 		
 		//跳转
@@ -541,21 +550,30 @@ async function filter(request,response){
 		}
 		
 		//文件直接访问
-		if(await fsUtils.exist(url)){
-			for(let i in sysArgs.contentTypes){//按文件类型访问
-				if(path.extname(url)=='.'+i){
-					callBackFileResponse(url,response,sysArgs.contentTypes[i].type,sysArgs.contentTypes[i].isStream);
-					return false;
-				}
-			}
-			//其他类型统一二进制下载
-			callBackFileResponse(url,response,'application/octet-stream',true);
-			return false;
-		}
+		return await toFile(request,response,url);
 		
 	}
 	
 	return true;
+}
+
+//文件直接访问
+async function toFile(request,response,url){
+	if(await fsUtils.exist(url)){
+		for(let i in sysArgs.contentTypes){//按文件类型访问
+			if(path.extname(url)=='.'+i){
+				callBackFileResponse(url,response,sysArgs.contentTypes[i].type,sysArgs.contentTypes[i].isStream);
+				return false;
+			}
+		}
+		//其他类型统一二进制下载
+		callBackFileResponse(url,response,'application/octet-stream',true);
+		return false;
+	}else{
+		//logger.error("找不到请求页面的路径！");
+		//logger.error(url);
+		return true;
+	}
 }
 
 //响应文件请求
@@ -565,13 +583,25 @@ function callBackFileResponse(url,response,contentType,isStream){
 		'Expires':new Date(Date.now() + sysArgs.staticCacheTime).toUTCString(),//静态文件缓存
 		'Cache-Control':'max-age='+(sysArgs.staticCacheTime/1000)
 	});
-	fs.readFile(url,'utf-8',async function(err,data){
+	fs.readFile(url,'utf-8',async function(err,html){
 			if(err){
-				//console.log(url+' 404!') 
+				logger.error("请求文件读取出错！");
+				logger.error(url);
 			}else{
 				if(isStream==undefined||isStream==false){
-					if(contentType.indexOf('html')!=-1)data=await htmlTemplate.exc(data);//html模板插入
-					response.end(data);
+					if(contentType.indexOf('html')!=-1){//html模板渲染
+						if(Object.keys(sysArgs.response_data).length>0){
+							for(let i in sysArgs.global_response_data){
+								if(sysArgs.response_data[i]==undefined){
+									sysArgs.response_data[i]=sysArgs.global_response_data[i];
+								}
+							}
+							html=await htmlTemplate.exc(html,sysArgs.response_data);
+						}else{
+							html=await htmlTemplate.exc(html,sysArgs.global_response_data);
+						}
+					}
+					response.end(html);
 				}else{
 					let stream = fs.createReadStream(url);
 					let responseData = [];
@@ -732,6 +762,8 @@ function conter(request,response){
 						utils:utils,
 						sys:sysArgs,
 						root:sysArgs.root,
+						global:sysArgs.global_response_data,
+						res_data:sysArgs.response_data,
 						out:function(_data){
 							if(_data==undefined){
 								this.res.writeHead(503, {'Content-Type': 'text/plain;charset=utf-8'});
@@ -787,7 +819,11 @@ function conter(request,response){
 			}
 			var con=sysArgs.cons[url_head].con;
 			try{
-				await con.apply(this,args);
+				let res=await con.apply(this,args);
+				if(res){
+					let url=pathUtils.p(':view/'+res);
+					toFile(request,response,url);
+				}
 			}catch(e){
 				logger.error("请求报错："+e);
 				logger.error("请求路径："+url_head);

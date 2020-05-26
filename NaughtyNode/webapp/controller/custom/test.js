@@ -1,4 +1,5 @@
 const app = require('../../../lib/controller');
+const imgUtils = require(':lib/imgUtils');
 
 app.setPrefix('/api');
 
@@ -88,5 +89,39 @@ app.get('/test_log',async function($) {
 	
 });
 
+app.get('/test_page',async function($) {
+	
+	$.res_data.test_data=(new Date().getTime())+'--获取成功！';
+	
+	return 'home.html';
+	
+});
+
+app.get('/test_code',async function($) {
+	
+	let c=imgUtils.codeImg('code');
+	$.session.set('imgcode',c.text.toLowerCase()).update();
+	$.out(c.data);
+	
+});
+
+app.get('/test_check_code',async function($,code) {
+	
+	if(code&&code.toLowerCase()==$.session.get('imgcode')){
+		$.success('验证码匹配成功！');
+	}else{
+		$.error('验证码匹配失败！');
+	}
+	
+	
+});
+
+app.get('/test_sql',async function($) {
+	
+	let res=await ($.db.getSqlTmp)('SELECT 1 + {num} AS solution{% if show %},{show} as so2{% endif %}',{num:2,show:true});
+	
+	$.out(res);
+	
+});
 
 module.exports = app;

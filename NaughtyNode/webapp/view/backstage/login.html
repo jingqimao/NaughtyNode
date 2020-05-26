@@ -68,12 +68,12 @@
 								</i-Input>
 							</Form-Item>
 							<Form-Item>
-								<i-Button type="primary" @click="loginOk('loginForm')" class="full_w">登录</i-Button>
+								<i-Button type="primary" @click="loginOk" class="full_w">登录</i-Button>
 							</Form-Item>
 						</i-form>
 						<!--<div class="lost_pass">
-							<a href="#">忘记密码？</a>-->
-						</div>
+							<a href="#">忘记密码？</a>
+						</div>-->
 					</p>
 				</Card>
 			</div>
@@ -101,8 +101,8 @@
 			
 		},
 		methods: {
-			loginOk(name){
-				this.$refs[name].validate((valid) => {
+			loginOk(){
+				this.$refs['loginForm'].validate((valid) => {
 					if(valid){
 						let res=wt.get('/sys/sys/login',this.login);
 						if(res=='true'){

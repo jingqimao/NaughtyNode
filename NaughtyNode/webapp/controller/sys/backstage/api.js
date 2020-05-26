@@ -399,30 +399,15 @@ app.get('/set_api_sysinfo',async function($,url,name,info) {
 				
 				if(api.db.type=='cus'){
 					
-					
-					
 					let set_args=[];
 					cus_sql=api.db.cus_sql;
 					for(let i in api.db.cus_args){
 						args.push(api.db.cus_args[i].name);
-					}
-					let c_args=cus_sql.match(/\{(.+?)\}/g);
-					for(let i in c_args){
-						let c_arg=c_args[i].replace('{','').replace('}','');
-						if(isItemByArr('name',c_arg,api.db.cus_args)){
-							cus_sql=cus_sql.replace(c_args[i],'?');
-							set_args.push(c_arg);
-						}
-					}
-					c_args=cus_sql.match(/\[(.+?)\]/g);
-					for(let i in c_args){
-						let c_arg=c_args[i].replace('[','').replace(']','');
-						if(isItemByArr('name',c_arg,api.db.cus_args)){
-							cus_sql=cus_sql.replace(c_args[i],'\"+'+c_arg+'\+"');
-						}
+						set_args.push(api.db.cus_args[i].name+':'+api.db.cus_args[i].name);
 					}
 					
-					content+='\tlet res=await ($.db.exc)(\"'+api.db.name+'\",\"'+cus_sql+'\",['+set_args.toString()+']);\r\n';
+					content+='\tlet tmp_data={'+set_args.toString()+'};\r\n';
+					content+='\tlet res=await ($.db.exc)(\"'+api.db.name+'\",\"'+cus_sql+'\",tmp_data);\r\n';
 					content+='\t$.out(res);';
 				}
 			}

@@ -62,6 +62,9 @@ app.init('init_sys',async function() {
 		cfUtils.get('_SYS_Setting').set(setting).save();
 	}
 	
+	//将设置引用到全局响应数据
+	$.global.setting=cfUtils.get('_SYS_Setting').data;
+	
 	//将素材引用加入缓存
 	cfUtils.add('_SYS_Material',pU.p(':setting/material.json'));
 	

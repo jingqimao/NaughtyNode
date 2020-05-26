@@ -21,6 +21,11 @@
 		.ivu-poptip-body{
 			text-align: left;
 		}
+		.help{
+			text-align: center;
+			margin-top: 100px;
+			color: #cacaca;
+		}
 		
 		
 		.ov_num{
@@ -78,6 +83,12 @@
 	<include src="/view/backstage/component/SqlChart.html"></include>
 	<div id="app">
 		<template>
+			<div class="help" v-if="ops_list.length==0">
+				<h1>无监控数据</h1>
+				<h3>1.找到config,yml设置数据库并重启</h3>
+				<h3>2.在"数据-数据监控"页面新建监控面板</h3>
+				<h3>3.打开监控面板上的监控台开关</h3>
+			</div>
 			<i-Col v-for="(item,index) in ops_list" v-if="item.console" :xs="item.size.xs" :sm="item.size.sm" :md="item.size.md" :lg="item.size.lg" :xl="item.size.xl" :xxl="item.size.xxl">
 				<div :class="item.type!='ov'?'col_card':''">
 					<template v-if="item.type=='ov'">

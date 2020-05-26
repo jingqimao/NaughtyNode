@@ -37,7 +37,7 @@ node:
     #    - ./webapp/sers
     
     #静态文件缓存时间
-    staticCacheTime: 0
+    staticCacheTime: 3600
     
     #作为服务中心
     #center: true
@@ -63,12 +63,12 @@ node:
 #数据库     
 db:
     #test: 
-    #    type: mysql
+    #    type: 
     #    host: 
     #    user: 
     #    password: 
     #    database: 
-    #    dateStrings: true
+    #    dateStrings: 
         
     #test2:
     #    type: mongodb
