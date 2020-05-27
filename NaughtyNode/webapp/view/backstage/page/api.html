@@ -540,7 +540,7 @@
 				if(res=='true'){
 					this.$Message.success('改名成功！');
 					data.r_path=data.s_path+'/'+data.title+suffix;
-					if(data.type=='dir')setTimeout(function(){
+					setTimeout(function(){
 						wt.reload();
 					},500);
 				}else{

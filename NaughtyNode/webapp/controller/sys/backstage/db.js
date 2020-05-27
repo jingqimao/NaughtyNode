@@ -50,7 +50,7 @@ app.get('/init_db',async function($,db) {
 		res=JSON.parse(fs.readFileSync(path,'utf8'));
 	}
 	
-	res.tables=await ($.db.exc)(db,"SELECT table_name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'base table' ",[db]);
+	res.tables=await ($.db.exc)(db,"SELECT TABLE_NAME as table_name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE' ",[db]);
 	
 	for(let i in res.tables){
 		let keys=await ($.db.exc)(db,"	SELECT COLUMN_NAME,COLUMN_TYPE,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,IS_NULLABLE,COLUMN_DEFAULT,COLUMN_COMMENT FROM INFORMATION_SCHEMA.COLUMNS where table_schema = ? AND table_name  = ?",[db,res.tables[i].table_name]);

@@ -43,7 +43,7 @@ var app={
 	},*/
 	exc:function(db_name,sql,arg){
 		if(app.dbs[db_name].type==='mysql'){
-			if(arg&&typeof arg == 'object'){//若参数为对象，使用模板解析
+			if(arg&&!arg instanceof Array){//若参数为对象，使用模板解析
 				let tmp=app.getSqlTmp(sql,arg);
 				sql=tmp.sql;
 				arg=tmp.arg;
