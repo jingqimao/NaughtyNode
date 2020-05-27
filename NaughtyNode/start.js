@@ -406,6 +406,9 @@ if(config.node!=undefined&&config.node.client!=undefined&&config.node.client.cen
 //定时清理缓存
 cacheUtils.timeOut(sysArgs.cacheTime);
 
+//定时清理数据缓存
+dbUtils.timeOutCD();
+
 if(sysArgs.isSession){
 	
 	//定时清理本地闲置session

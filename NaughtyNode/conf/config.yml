@@ -61,14 +61,14 @@ node:
     #    /weather_api: http://t.weather.sojson.com/api/weather/city/101030100
     
 #数据库     
-#db:
+db:
     #test: 
-    #    type: mysql
+    #    type: 
     #    host: 
     #    user: 
     #    password: 
     #    database: 
-    #    dateStrings: true
+    #    dateStrings: 
         
     #test2:
     #    type: mongodb

@@ -294,13 +294,16 @@ app.get('/set_api_sysinfo',async function($,url,name,info) {
 					let page_sql='';
 					let sort_sql='';
 					
+					let total_sql='\tlet test=await ($.db.exc)(\"'+api.db.name+'\","select count(*) as max_size from `'+api.db.table+'`';
+					let total_args=[];
+					
 					let columns=[];
 					for(let i in api.db.columns){
 						columns.push('`'+api.db.columns[i]+'`');
 					}
 					
 					if(api.db.sort){
-						content+='\tlet desc=desc==\"true\"?\"desc\":\"asc\";\r\n';
+						content+='\tdesc=desc==\"true\"?\"desc\":\"asc\";\r\n';
 					}
 					content+='\tlet res=await ($.db.exc)(\"'+api.db.name+'\",\"select '+columns.toString()+' from `'+api.db.table+'`';
 					if(where_sql!=''){
@@ -313,9 +316,16 @@ app.get('/set_api_sysinfo',async function($,url,name,info) {
 							if(isItemByArr('name',w_arg,api.db.where.args)){
 								where_sql=where_sql.replace(w_args[i],'?');
 								set_args.push(w_arg);
+								total_args.push(w_arg);
 							}
 						}
 						content+=' where '+where_sql;
+						if(api.db.page)total_sql+=' where '+where_sql;
+					}
+					
+					if(api.db.sort){
+						sort_sql=' order by `'+api.db.sort_key+'` \"+desc+\"';
+						content+=sort_sql;
 					}
 					if(api.db.page){
 						args.push('page');
@@ -324,11 +334,18 @@ app.get('/set_api_sysinfo',async function($,url,name,info) {
 						content+=page_sql;
 					}
 					if(api.db.sort){
-						sort_sql=' order by `'+api.db.sort_key+'` \"+desc+\"';
-						content+=sort_sql;
+						args.push('desc');
 					}
+					
 					content+='\",['+set_args.toString()+']);\r\n';
-					content+='\t$.out(res);';
+					if(api.db.page){
+						total_sql+='\",['+total_args.toString()+']);\r\n';
+						content+=total_sql;
+						content+='\t$.out({\r\n\t\ttotal:test[0].max_size,\r\n\t\tdata:res\r\n\t});';
+					}else{
+						content+='\t$.out(res);';
+					}
+					
 				}
 				
 				if(api.db.type=='add'){

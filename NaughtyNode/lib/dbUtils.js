@@ -325,6 +325,88 @@ var app={
 			sql:_sql,
 			arg:_arg
 		}
+	},
+	_cacheData:{},//缓存数据
+	_cacheTime:30*1000,//缓存默认30秒
+	_cacheCheckTime:5*1000,//缓存检查清理默认5秒
+	setCD:function(db,table,key,cols,name){//预设参数
+		app._cacheData[name]={
+			name:name,
+			db:db,
+			table:table,
+			key:key,
+			cols:cols,
+			_data:{},
+			_time:{},
+			_get_from_db:async function(k){
+				try{
+					let res=await app.exc(this.db,'select '+this.cols.toString()+' from '+this.table+' where `'+this.key+'` = ? ',[k]);
+					this._data[k]=res[0];
+					this._time[k]=(new Date().getTime())+app._cacheTime;
+					return this._data[k];
+				}catch(e){
+					app.log.error("数据缓存从数据库获取出错！");
+					app.log.error("缓存名称:"+this.name);
+					app.log.error(e);
+					return null;
+				}
+				
+			},
+			get:async function(k){
+				if(this._data[k]!=undefined){
+					return this._data[k];
+				}else{
+					return await this._get_from_db(k);
+				}
+			},
+			set:function(k,v){
+				this._data[k]=v;
+				return this;
+			},
+			finish:async function(k){
+				try{
+					let cs=[],vs=[];
+					for(let i in this.cols){
+						cs.push('`'+this.cols[i]+'` = ?');
+						vs.push(this._data[k][this.cols[i]]);
+					}
+					vs.push(k);
+					let res=await app.exc(this.db,'update '+this.table+' set '+cs.toString()+' where `'+this.key+'` = ?',vs);
+					if(res&&res.affectedRows==1){
+						delete this._data[k];
+						delete this._time[k];
+						return true;
+					}else{
+						return false;
+					}
+				}catch(e){
+					app.log.error("数据缓存保存到数据库出错！");
+					app.log.error("缓存名称:"+this.name);
+					app.log.error(e);
+					return false;
+				}
+			},
+			finishByTime:function(time,k){
+				if(this._time[k]<time)this.finish(k);
+			}
+		};
+	},
+	getCD:function(name){
+		if(app._cacheData[name]!=undefined){
+			return app._cacheData[name];
+		}else{
+			return null;
+		}
+	},
+	timeOutCD:function(){
+		setInterval(function(){
+			let now=new Date().getTime();
+			for(let i in app._cacheData){
+				for(let j in app._cacheData[i]._data){
+					app._cacheData[i].finishByTime(now,j);
+				}
+			}
+		},app._cacheCheckTime);
 	}
 }
 

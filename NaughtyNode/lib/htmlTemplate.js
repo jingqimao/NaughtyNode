@@ -139,6 +139,18 @@ var app={
 	},
 	//动态执行语句并返回结果
 	runjs:function(jsstr,data){
+		var escape={
+			"&apos;":"'",
+			"&nbsp;":" ",
+			"&lt;":"<",
+			"&gt;":">",
+			"&amp;":"&",
+			"&quot;":"\"",
+			"&copy;":"©"
+		};
+		for(let i in escape){//html转义
+			jsstr=jsstr.replace(new RegExp(i,"g"),escape[i]);
+		}
 		var head="";
 		if(data==undefined)data=null;
 		var item={
