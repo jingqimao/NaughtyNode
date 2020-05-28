@@ -11,6 +11,8 @@
 	<script src="/static/js/jquery.form.min.js"></script>
 	<script src="/static/js/md5.min.js"></script>
 	<script src="/static/tinymce/tinymce.min.js"></script>
+	<link href="/static/prism/prism.css" rel="stylesheet" />
+	<script src="/static/prism/prism.js"></script>
 	
 	<style>
 		#app{
@@ -566,8 +568,9 @@
 				tinymce.init({
 					selector:'#tinymce',
 					//plugins: 'print preview importcss searchreplace autosave save directionality visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern noneditable help charmap quickbars emoticons',
-					plugins:'fullscreen image link media table imagetools',
-					toolbar:'styleselect | fontsizeselect forecolor backcolor | link image media table | alignleft aligncenter alignright | fullscreen',
+					plugins:'fullscreen image link media table imagetools codesample',
+					toolbar:'styleselect | fontsizeselect forecolor backcolor | link image media table codesample| alignleft aligncenter alignright | fullscreen',
+					codesample_global_prismjs: true,
 					images_upload_handler:((blobInfo, success, failure)=>{
 						var form = new FormData();
 						form.append('files', blobInfo.blob(), blobInfo.filename());
