@@ -568,9 +568,10 @@
 				tinymce.init({
 					selector:'#tinymce',
 					//plugins: 'print preview importcss searchreplace autosave save directionality visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern noneditable help charmap quickbars emoticons',
-					plugins:'fullscreen image link media table imagetools codesample',
+					plugins:'fullscreen image link media table imagetools codesample nonbreaking',
 					toolbar:'styleselect | fontsizeselect forecolor backcolor | link image media table codesample| alignleft aligncenter alignright | fullscreen',
 					codesample_global_prismjs: true,
+					nonbreaking_force_tab: true,
 					images_upload_handler:((blobInfo, success, failure)=>{
 						var form = new FormData();
 						form.append('files', blobInfo.blob(), blobInfo.filename());

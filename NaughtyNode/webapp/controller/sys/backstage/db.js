@@ -123,7 +123,11 @@ app.get('/get_table_data',async function($,db,table,keys,page,limit,desc) {
 	let n=(page-1)*limit;
 	desc=desc=='true'?'desc':'asc';
 	let test=await ($.db.exc)(db,"select count(*) as max_size from "+table,[]);
-	let res=await ($.db.exc)(db,"select "+keys.toString()+" from "+table+" order by id "+desc+" limit "+n+","+limit,[]);
+	let _keys=[];
+	for(let i in keys){
+		_keys.push('`'+keys[i]+'`');
+	}
+	let res=await ($.db.exc)(db,"select "+_keys.toString()+" from `"+table+"` order by `id` "+desc+" limit "+n+","+limit,[]);
 	
 	$.out({
 		total:test[0].max_size,
@@ -137,11 +141,11 @@ app.get('/add_table_data',async function($,db,table,data) {
 	let vv=[];
 	let vals=[];
 	for(let i in data){
-		keys.push(i);
+		keys.push('`'+i+'`');
 		vv.push('?');
 		vals.push(data[i]);
 	}
-	let res=await ($.db.exc)(db,"insert into "+table+" ("+keys.toString()+") values ("+vv.toString()+")",vals);
+	let res=await ($.db.exc)(db,"insert into `"+table+"` ("+keys.toString()+") values ("+vv.toString()+")",vals);
 	$.out(res);
 	
 });
@@ -151,17 +155,17 @@ app.get('/save_table_data',async function($,db,table,data,id) {
 	let keys=[];
 	let vals=[];
 	for(let i in data){
-		keys.push(i+' = ?');
+		keys.push('`'+i+'` = ?');
 		vals.push(data[i]);
 	}
 	vals.push(id);
-	let res=await ($.db.exc)(db,"update "+table+" set "+keys.toString()+" where id = ?" ,vals);
+	let res=await ($.db.exc)(db,"update `"+table+"` set "+keys.toString()+" where `id` = ?" ,vals);
 	$.out(res);
 	
 });
 app.get('/del_table_data',async function($,db,table,id) {
 	
-	let res=await ($.db.exc)(db,"delete from "+table+" where id = ?" ,id);
+	let res=await ($.db.exc)(db,"delete from `"+table+"` where `id` = ?" ,id);
 	$.out(res);
 	
 });

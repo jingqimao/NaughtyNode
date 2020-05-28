@@ -160,6 +160,7 @@ app.get('/get_api_info',async function($,space,url,name) {
 			prefix=res.match(/app.setPrefix\(\"(.+?)\"\)/);
 			if(prefix!=null)prefix=prefix[1];
 		}
+		if(prefix==null)prefix='';
 		
 		let reg=/app.get\(\'(.+?)\',async function\(\$(.*?)\)/g;
 		let reg_suffix=/app.get\(\'(.+?)\',/;
