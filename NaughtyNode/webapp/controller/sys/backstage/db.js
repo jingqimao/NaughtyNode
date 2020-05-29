@@ -180,6 +180,63 @@ app.get('/upload_article_img',async function($) {
 	}
 	$.out({error:false,path:res});
 });
+app.get('/get_relate_data',async function($,db,row,sql,key,title) {
+	
+	row=JSON.parse(row);
+	let sql_ok=true;
+	let args=[];
+	if(row&&Object.keys(row).length>0){
+		let c_args=sql.match(/\{(.+?)\}/g);
+		for(let i in c_args){
+			let arg_name=c_args[i].replace('{','').replace('}','');
+			if(row[arg_name]!=undefined){
+				sql=sql.replace(c_args[i],'?');
+				args.push(row[arg_name]);
+			}else{
+				$.log.error("数据库关联sql模板变量渲染出错！");
+				$.log.error(c_args[i]);
+				sql_ok=false;
+			}
+		}
+		c_args=sql.match(/\[(.+?)\]/g);
+		for(let i in c_args){
+			let arg_name=c_args[i].replace('[','').replace(']','');
+			if(row[arg_name]!=undefined){
+				sql=sql.replace(c_args[i],row[arg_name]);
+			}else{
+				$.log.error("数据库关联sql模板变量渲染出错！");
+				$.log.error(c_args[i]);
+				sql_ok=false;
+			}
+		}
+	}
+	
+	if(sql_ok){
+		let res=await ($.db.exc)(db,sql,args);
+		if(res&&res.length>0){
+			if(title!=undefined){
+				let sels=[];
+				for(let i in res){
+					sels.push({
+						key:res[i][key],
+						title:res[i][title]
+					});
+				}
+				$.out(sels);
+			}else{
+				$.out({
+					key:res[0][key]
+				});
+			}
+		}else{
+			$.out({});
+		}
+	}else{
+		$.out({});
+	}
+	
+	
+});
 
 //数据监控
 app.get('/get_sql_card',async function($) {

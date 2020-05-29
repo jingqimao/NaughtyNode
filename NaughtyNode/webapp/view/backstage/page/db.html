@@ -52,7 +52,7 @@
 								<Radio label="显示"></Radio>
 							</Radio-Group>
 						</template>
-						<Tab-Pane tab="table_tabs" v-for="table in db.struct.tables" :label="table.table_name" :name="table.table_name" :style="{height:'calc(100% - 50px)'}">
+						<Tab-Pane tab="table_tabs" v-for="table in db.struct.tables" v-if="hide_utb=='显示'||hide_utb=='隐藏未定义'&&db.struct.table_json[table.table_name]!=undefined" :label="table.table_name" :name="table.table_name" :style="{height:'calc(100% - 50px)'}">
 							<i-button v-if="db.struct.table_json[table.table_name]==undefined" icon="md-cube" @click="initTable(db.name,table.table_name,db.struct.table_keys[table.table_name])">初始化表</i-button>
 							<template v-if="db.struct.table_json[table.table_name]!=undefined">
 								<i-button icon="md-add" @click="addRow">添加数据</i-button>
@@ -72,6 +72,14 @@
 									:columns="show_table.columns"
 									:data="show_table.data"
 									@on-row-dblclick="rowDblClick">
+									<template v-for="t_relate_item in t_relate_list" slot-scope="{ row, index }" :slot="t_relate_item.key">
+										<template v-if="t_relate_item.s_type!='relate_select'">
+											{{ getRelateData(row,t_relate_item.relate.sql,t_relate_item.relate.key).key }}
+										</template>
+										<template v-if="t_relate_item.s_type=='relate_select'">
+											{{ wt.getItemByArr('key',row[t_relate_item.key],getRelateData([],t_relate_item.relate.sql,t_relate_item.relate.key,t_relate_item.relate.title)).title }}
+										</template>
+									</template>
 									<template v-for="t_img_item in t_img_list" slot-scope="{ row, index }" :slot="t_img_item.key">
 										<Avatar :src="row[t_img_item.key]" @click.native="visitImg(row[t_img_item.key])" shape="square" icon="ios-person" size="large" style="cursor: pointer;" title="点击查看"/>
 									</template>
@@ -116,10 +124,11 @@
 						<i-Select v-if="key.s_display!='unedit'&&key.s_display!='uneditsee'" v-model="key.s_type" style="width:100px; margin-left:10px;">
 							<i-Option v-for="item in key.s_slist" :value="item.type">{{item.name}}</i-Option>
 						</i-Select>
-						<Input-Number v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&(key.s_type=='text'||key.s_type=='longtext'||key.s_type=='areatext'||key.s_type=='password'||key.s_type=='article')" :min="0" precision="0" placeholder="文字限制" style=" margin-left:10px;" v-model="key.s_data.size"></Input-Number>
+						<Input-Number v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&(key.s_type=='text'||key.s_type=='longtext'||key.s_type=='areatext'||key.s_type=='password'||key.s_type=='article')" :min="0" precision="0" placeholder="文字限制" style="width:120px;margin-left:10px;" v-model="key.s_data.size"></Input-Number>
 						<i-button v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&key.s_type=='select'" icon="md-list" @click="editSelect(key)" style=" margin-left:10px;">列表 {{key.s_data.select_list.length}}项</i-button>
 						<i-Input v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&key.s_type=='checkbox'" v-model="key.s_data.check_txt.on" placeholder="on标题" style="width:120px;margin-left: 5px;"></i-Input>
 						<i-Input v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&key.s_type=='checkbox'" v-model="key.s_data.check_txt.off" placeholder="off标题" style="width:120px;margin-left: 5px;"></i-Input>
+						<i-button v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&key.s_type.indexOf('relate')>-1" icon="md-link" @click="editRelate(key)" style=" margin-left:10px;">设置关联</i-button>
 					</List-Item>
 				</List>
 			</Modal>
@@ -138,13 +147,28 @@
 				</List>
 			</Modal>
 			<Modal
+				v-model="relate_box"
+				title="编辑关联设置">
+				<i-form v-if="relate_key" :label-width="120">
+					<Form-Item label="关联语句">
+						<i-Input v-model="relate_key.s_data.relate.sql" type="textarea" style="width:320px;" autosize></i-Input>
+					</Form-Item>
+					<Form-Item label="关联键值">
+						<i-Input v-model="relate_key.s_data.relate.key" type="text" style="width:120px;" autosize></i-Input>
+					</Form-Item>
+					<Form-Item v-if="relate_key.s_type=='relate_select'" label="关联标题">
+						<i-Input v-model="relate_key.s_data.relate.title" type="text" style="width:120px;" autosize></i-Input>
+					</Form-Item>
+				</i-form>
+			</Modal>
+			<Modal
 				v-model="edit_row_box"
 				:title="edit_row_title"
 				@on-ok="saveRowOk"
 				@on-cancel="cancel">
 				<i-form  :model="show_table" :label-width="120">
 					<Form-Item v-for="(item,index) in show_table.edit_json" v-if="item.s_display!='unedit'&&item.s_display!='uneditsee'" :label="item.s_title!=''?item.s_title:item.name">
-						<i-Input v-if="item.s_type=='text'"
+						<i-Input v-if="item.s_type=='text'||item.s_type=='relate_text'"
 							v-model="edit_row_data[item.name]" style="width:160px;" :maxlength="item.length"></i-Input>
 						<i-Input v-if="item.s_type=='longtext'"
 							v-model="edit_row_data[item.name]" show-word-limit :maxlength="item.length" style="width:320px;"></i-Input>
@@ -152,8 +176,12 @@
 							v-model="edit_row_data[item.name]" type="textarea" show-word-limit :maxlength="item.length" style="width:320px;"></i-Input>
 						<i-Input v-if="item.s_type=='password'"
 							v-model="edit_row_data[item.name]" type="password" style="width:160px;"  placeholder="输入密码" password ></i-Input>
-						<Input-Number v-if="item.s_type=='num'"
-							:min="0" precision="0" style="" v-model="edit_row_data[item.name]"></Input-Number>
+						<Input-Number v-if="item.s_type=='num'||item.s_type=='relate_id'"
+							precision="0" style="" v-model="edit_row_data[item.name]"></Input-Number>
+						<Input-Number v-if="item.s_type=='bignum'"
+							:min="-9223372036854775807" :max="9223372036854775807" precision="0" v-model="edit_row_data[item.name]" style="width:200px;"></Input-Number>
+						<Input-Number v-if="item.s_type=='decimal'"
+							v-model="edit_row_data[item.name]" :step="0.1" style="width:100px;"></Input-Number>
 						<i-Switch v-if="item.s_type=='checkbox'" v-model="edit_row_data[item.name]" size="large" :true-value="0" :false-value="1">
 							<span slot="open">{{item.s_data.check_txt.on}}</span>
 							<span slot="close">{{item.s_data.check_txt.off}}</span>
@@ -161,7 +189,16 @@
 						<i-Select v-if="item.s_type=='select'" v-model="edit_row_data[item.name]" style="width:200px">
 							<i-Option v-for="sel_item in item.s_data.select_list" :value="sel_item.key">{{ sel_item.name }}</Option>
 						</i-Select>
+						<i-Select v-if="item.s_type=='relate_select'" v-model="edit_row_data[item.name]" style="width:200px">
+							<i-Option v-for="sel_item in getRelateData([],item.s_data.relate.sql,item.s_data.relate.key,item.s_data.relate.title)" :value="sel_item.key">{{ sel_item.title }}</Option>
+						</i-Select>
+						<Date-Picker v-if="item.s_type=='date'"
+							type="date" style="width: 120px" format="yyyy-MM-dd" :value="edit_row_data[item.name]" @on-change="(datatime)=>{edit_row_data[item.name]=datatime}"></Date-Picker>
+						<Date-Picker v-if="item.s_type=='time'"
+							type="time" style="width: 120px" format="HH:mm:ss" :value="edit_row_data[item.name]" @on-change="(datatime)=>{edit_row_data[item.name]=datatime}"></Date-Picker>
 						<Date-Picker v-if="item.s_type=='datetime'"
+							type="datetime" style="width: 200px" format="yyyy-MM-dd HH:mm:ss" :value="edit_row_data[item.name]" @on-change="(datatime)=>{edit_row_data[item.name]=datatime}"></Date-Picker>
+						<Date-Picker v-if="item.s_type=='timestamp'"
 							type="datetime" style="width: 200px" format="yyyy-MM-dd HH:mm:ss" :value="edit_row_data[item.name]" @on-change="(datatime)=>{edit_row_data[item.name]=datatime}"></Date-Picker>
 						<Upload multiple 
 							 v-if="item.s_type=='img'"
@@ -245,9 +282,12 @@
 			t_select_list:[],
 			t_check_list:[],
 			t_img_list:[],
+			t_relate_list:[],
 			visible_box:false,
 			visible_name:'',
-			visible_img:''
+			visible_img:'',
+			relate_box:false,
+			relate_key:null
 		},
 		mounted() {
 			this.update();
@@ -285,7 +325,12 @@
 								on:'开启',
 								off:'关闭'
 							},
-							select_list:[]
+							select_list:[],
+							relate:{
+								sql:'',
+								key:'',
+								title:''
+							}
 						},
 						s_slist:this.getTypeList(keys[i])
 					};
@@ -335,21 +380,29 @@
 						type:'password'
 					});
 					list.push({
-						name:'选择',
+						name:'列表选择',
 						type:'select'
+					});
+					list.push({
+						name:'关联文本',
+						type:'relate_text'
+					});
+					list.push({
+						name:'关联选择',
+						type:'relate_select'
 					});
 					list.push({
 						name:'图片',
 						type:'img'
 					});
 				}
-				if(key.dtype=='text'){
+				if(key.dtype=='text'||key.dtype=='mediumtext'||key.dtype=='longtext'||key.dtype=='blob'||key.dtype=='mediumblob'||key.dtype=='longblob'){
 					list.push({
 						name:'文章',
 						type:'article'
 					});
 				}
-				if(key.dtype=='int'){
+				if(key.dtype=='int'||key.dtype=='long'){
 					list.push({
 						name:'数字',
 						type:'num'
@@ -358,11 +411,49 @@
 						name:'开关',
 						type:'checkbox'
 					});
+					list.push({
+						name:'关联ID',
+						type:'relate_id'
+					});
+					list.push({
+						name:'关联选择',
+						type:'relate_select'
+					});
+				}
+				if(key.dtype=='bigint'){
+					list.push({
+						name:'大数字',
+						type:'bignum'
+					});
+				}
+				if(key.dtype=='float'||key.dtype=='double'||key.dtype=='decimal'){
+					list.push({
+						name:'小数',
+						type:'decimal'
+					});
+				}
+				if(key.dtype=='timestamp'){
+					list.push({
+						name:'时间戳',
+						type:'timestamp'
+					});
 				}
 				if(key.dtype=='datetime'){
 					list.push({
 						name:'日期时间',
 						type:'datetime'
+					});
+				}
+				if(key.dtype=='date'){
+					list.push({
+						name:'日期',
+						type:'date'
+					});
+				}
+				if(key.dtype=='time'){
+					list.push({
+						name:'时间',
+						type:'time'
 					});
 				}
 				return list;
@@ -402,6 +493,8 @@
 					let t_s_l=[];
 					let t_c_l=[];
 					let t_img_l=[];
+					let t_relate_l=[];
+					
 					
 					for(let i in tb_json){
 						if(tb_json[i].s_display!='uneditsee'){
@@ -437,6 +530,14 @@
 								});
 								column.slot=tb_json[i].name;
 							}
+							if(tb_json[i].s_type.indexOf('relate')>-1){
+								t_relate_l.push({
+									key:tb_json[i].name,
+									s_type:tb_json[i].s_type,
+									relate:tb_json[i].s_data.relate
+								});
+								column.slot=tb_json[i].name;
+							}
 							columns.push(column);
 						}
 					}
@@ -444,6 +545,7 @@
 					this.t_select_list=t_s_l;
 					this.t_check_list=t_c_l;
 					this.t_img_list=t_img_l;
+					this.t_relate_list=t_relate_l;
 					
 					columns.push({
 						title:'操作',
@@ -533,7 +635,6 @@
 						}
 					}
 				}
-				console.log(data)
 				if(this.edit_row_title=="添加数据"){
 					let res=wt.get('/sys/db/add_table_data',{db:this.tab_db,table:this.tab_table,data:wt.toSTR(data)});
 					if(res&&res.affectedRows>0){
@@ -637,6 +738,19 @@
 				this.visible_name=img.split('_').length>1?img.split('_')[1]:img;
 				this.visible_img=img;
 				this.visible_box=true;
+			},
+			editRelate(key){
+				this.relate_key=key;
+				this.relate_box=true;
+			},
+			getRelateData(row,sql,key,title){
+				return wt.get('/sys/db/get_relate_data',{
+					db:this.tab_db,
+					row:wt.toSTR(row),
+					sql:sql,
+					key:key,
+					title:title
+				});
 			}
         }
 	});
