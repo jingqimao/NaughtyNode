@@ -1,0 +1,13 @@
+{
+	"type": "val",
+	"data_type": "html",
+	"data": {
+		"val": "<p><video controls=\"controls\" width=\"508\" height=\"254\">\n<source src=\"/stay/file/43f756b0-9bf4-11ea-8af9-d1617f4cc2f3_video.mp4\" type=\"video/mp4\" /></video>das<strong>dasa</strong>sfas</p>",
+		"arr": [],
+		"map": [],
+		"list": [],
+		"list_columns": [],
+		"node": [],
+		"node_columns": []
+	}
+}

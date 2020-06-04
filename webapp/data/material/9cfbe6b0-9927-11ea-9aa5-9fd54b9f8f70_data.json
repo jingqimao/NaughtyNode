@@ -1,0 +1,22 @@
+{
+	"type": "map",
+	"data_type": "str",
+	"data": {
+		"val": "",
+		"arr": [],
+		"map": [
+			{
+				"key": "a",
+				"val": "1111111111"
+			},
+			{
+				"key": "b",
+				"val": "222222222"
+			}
+		],
+		"list": [],
+		"list_columns": [],
+		"node": [],
+		"node_columns": []
+	}
+}

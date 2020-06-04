@@ -1,0 +1,23 @@
+[
+	{
+		"type": "manager",
+		"tag": "manager",
+		"name": "管理员",
+		"tip": "拥有业务管理权限",
+		"time": "2020-06-03 9:30:48"
+	},
+	{
+		"type": "manager",
+		"tag": "super_manager",
+		"name": "超级管理员",
+		"tip": "拥有全部后台管理权限",
+		"time": "2020-05-21 11:57:9"
+	},
+	{
+		"type": "user",
+		"tag": "user",
+		"name": "普通用户",
+		"tip": "普通用户",
+		"time": "2020-05-21 11:58:6"
+	}
+]

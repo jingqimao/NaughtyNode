@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="/sys_static/js/jquery-3.3.1.min.js"></script>
+	<script src="/sys_static/js/wheel_utils.js"></script>
+	<script src="/sys_static/js/vue.min.js"></script>
+	<link rel="stylesheet" href="/sys_static/iview2/styles/iview.css">
+	<script src="/sys_static/iview2/iview.min.js"></script>
+	<script src="/sys_static/js/jquery.form.min.js"></script>
+	<script src="/sys_static/js/md5.min.js"></script>
+	<script src="/sys_static/tinymce/tinymce.min.js"></script>
+	<link href="/sys_static/prism/prism.css" rel="stylesheet" />
+	<script src="/sys_static/prism/prism.js"></script>
+	
+	<style>
+		#app{
+			padding:20px;
+		}
+		.ivu-poptip-body{
+			text-align: left;
+		}
+		.help{
+			text-align: center;
+			margin-top: 100px;
+			color: #cacaca;
+		}
+		
+		.table_list .ivu-list-item:hover{
+			background: #d9ebff;
+			cursor: pointer;
+		}
+		.table_list .ivu-list-item{
+			text-indent: 5px;
+		}
+		.show_img{
+			width: 300px;
+			box-shadow: 1px 1px 3px #d8d8d8;
+		}
+	</style>
+</head>
+<body>
+	<div id="app">
+		<template>
+			<div class="help" v-if="dbs.length==0">
+				<h1>未设置数据库</h1>
+				<h3>1.找到config.yml设置数据库</h3>
+				<h3>2.重启服务</h3>
+			</div>
+			<Tabs v-if="dbs.length>0" name="db_tabs" :value="tab_db" @on-click="updateDB">
+				<Tab-Pane v-for="db in dbs" :label="db.name" :name="db.name" :style="{height:'calc(100% - 50px)'}" tab="db_tabs">
+					<i-button v-if="db.struct==null" icon="md-cube" @click="initDB(db.name)">初始数据库</i-button>
+					<Tabs v-if="db.struct!=null" name="table_tabs" :value="tab_table" @on-click="updateTable">
+						<template slot="extra">
+							<Button-Group>
+								<i-button icon="md-refresh" @click="initDB(db.name)">刷新</i-button>
+								<i-button icon="md-cloud-download">备份库</i-button>
+							</Button-Group>
+							<Radio-Group v-model="hide_utb" type="button" slot="extra">
+								<Radio label="隐藏未定义"></Radio>
+								<Radio label="显示"></Radio>
+							</Radio-Group>
+						</template>
+						<Tab-Pane tab="table_tabs" v-for="table in db.struct.tables" v-if="hide_utb=='显示'||hide_utb=='隐藏未定义'&&db.struct.table_json[table.table_name]!=undefined" :label="table.table_name" :name="table.table_name" :style="{height:'calc(100% - 50px)'}">
+							<i-button v-if="db.struct.table_json[table.table_name]==undefined" icon="md-cube" @click="initTable(db.name,table.table_name,db.struct.table_keys[table.table_name])">初始化表</i-button>
+							<template v-if="db.struct.table_json[table.table_name]!=undefined">
+								<i-button icon="md-add" @click="addRow">添加数据</i-button>
+								<i-button icon="md-refresh" @click="refreshTable">刷新</i-button>
+								<Radio-Group v-model="show_table.rank" type="button" @on-change="changeRank">
+									<Radio label="升序"></Radio>
+									<Radio label="降序"></Radio>
+								</Radio-Group>
+								<Button-Group style="float:right">
+									<i-button icon="ios-cube-outline" @click="resetTable(db.name,table.table_name,db.struct.table_keys[table.table_name])">修改定义</i-button>
+									<i-button icon="md-refresh" @click="initTable(db.name,table.table_name,db.struct.table_keys[table.table_name])">重获结构</i-button>
+								</Button-Group>
+								<i-table
+									v-if="db.struct.table_json!=null"
+									context-menu
+									style="margin-top: 10px;"
+									:columns="show_table.columns"
+									:data="show_table.data"
+									@on-row-dblclick="rowDblClick">
+									<template v-for="t_relate_item in t_relate_list" slot-scope="{ row, index }" :slot="t_relate_item.key">
+										<template v-if="t_relate_item.s_type!='relate_select'">
+											{{ getRelateData(row,t_relate_item.relate.sql,t_relate_item.relate.key).key }}
+										</template>
+										<template v-if="t_relate_item.s_type=='relate_select'">
+											{{ wt.getItemByArr('key',row[t_relate_item.key],getRelateData([],t_relate_item.relate.sql,t_relate_item.relate.key,t_relate_item.relate.title)).title }}
+										</template>
+									</template>
+									<template v-for="t_img_item in t_img_list" slot-scope="{ row, index }" :slot="t_img_item.key">
+										<Avatar :src="row[t_img_item.key]" @click.native="visitImg(row[t_img_item.key])" shape="square" icon="ios-person" size="large" style="cursor: pointer;" title="点击查看"/>
+									</template>
+									<template v-for="t_select_item in t_select_list" slot-scope="{ row, index }" :slot="t_select_item.key">
+										{{t_select_item.select_list[row[t_select_item.key]]}}
+									</template>
+									<template v-for="t_check_item in t_check_list" slot-scope="{ row, index }" :slot="t_check_item.key">
+										{{row[t_check_item.key]==0?t_check_item.on:t_check_item.off}}
+									</template>
+									<template slot-scope="{ row, index }" slot="action">
+										<i-button type="primary" size="small" style="margin-right: 5px" @click="eidtRow(row)">编辑</i-button>
+										<Poptip
+											confirm
+											placement="left"
+											title="确定要删除吗？"
+											@on-ok="delRow(row)"
+											@on-cancel="cancel">
+											<i-button type="error" size="small">删除</i-button>
+										</Poptip>
+									</template>
+								</i-table>
+								<Page :total="show_table.total" show-total :page-size="show_table.limit" @on-change="pageChange" style="margin-top: 10px;text-align: center;"/>
+							</template>
+						</Tab-Pane>
+					</Tabs>
+					
+				</Tab-Pane>
+			</Tabs>
+			<Modal
+				width="700px"
+				v-model="init_table_box"
+				title="定义数据编辑类型"
+				@on-ok="initTableOk"
+				@on-cancel="cancel">
+				<List size="small">
+					<List-Item v-for="key in set_table_struct">
+						<strong style="width: 80px;text-align: left;text-indent: 5px;text-align: right;">{{key.name}}</strong>
+						<i-Input v-model="key.s_title" placeholder="显示标题" style="width:120px; margin-left:10px;"></i-Input>
+						<i-Select v-model="key.s_display" style="width:100px; margin-left:10px;">
+							<i-Option v-for="item in display_list" :value="item.type">{{item.name}}</i-Option>
+						</i-Select>
+						<i-Select v-if="key.s_display!='unedit'&&key.s_display!='uneditsee'" v-model="key.s_type" style="width:100px; margin-left:10px;">
+							<i-Option v-for="item in key.s_slist" :value="item.type">{{item.name}}</i-Option>
+						</i-Select>
+						<Input-Number v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&(key.s_type=='text'||key.s_type=='longtext'||key.s_type=='areatext'||key.s_type=='password'||key.s_type=='article')" :min="0" precision="0" placeholder="文字限制" style="width:120px;margin-left:10px;" v-model="key.s_data.size"></Input-Number>
+						<i-button v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&key.s_type=='select'" icon="md-list" @click="editSelect(key)" style=" margin-left:10px;">列表 {{key.s_data.select_list.length}}项</i-button>
+						<i-Input v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&key.s_type=='checkbox'" v-model="key.s_data.check_txt.on" placeholder="on标题" style="width:120px;margin-left: 5px;"></i-Input>
+						<i-Input v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&key.s_type=='checkbox'" v-model="key.s_data.check_txt.off" placeholder="off标题" style="width:120px;margin-left: 5px;"></i-Input>
+						<i-button v-if="(key.s_display!='unedit'&&key.s_display!='uneditsee')&&key.s_type.indexOf('relate')>-1" icon="md-link" @click="editRelate(key)" style=" margin-left:10px;">设置关联</i-button>
+					</List-Item>
+				</List>
+			</Modal>
+			<Modal
+				v-model="select_list_box"
+				title="编辑选项列表"
+				@on-ok="selectListOk"
+				@on-cancel="cancel">
+				<i-button icon="md-add" @click="addSelect">添加选项</i-button>
+				<List size="small">
+					<List-Item v-for="(item,index) in select_key.s_data.select_list">
+						<i-Input v-model="item.key" placeholder="键值" style="margin-right: 5px;"></i-Input>
+						<i-Input v-model="item.name" placeholder="标题" style="margin-right: 5px;"></i-Input>
+						<i-button type="text" icon="md-close" @click="delSelect(index)"></i-button>
+					</List-Item>
+				</List>
+			</Modal>
+			<Modal
+				v-model="relate_box"
+				title="编辑关联设置">
+				<i-form v-if="relate_key" :label-width="120">
+					<Form-Item label="关联语句">
+						<i-Input v-model="relate_key.s_data.relate.sql" type="textarea" style="width:320px;" autosize></i-Input>
+					</Form-Item>
+					<Form-Item label="关联键值">
+						<i-Input v-model="relate_key.s_data.relate.key" type="text" style="width:120px;" autosize></i-Input>
+					</Form-Item>
+					<Form-Item v-if="relate_key.s_type=='relate_select'" label="关联标题">
+						<i-Input v-model="relate_key.s_data.relate.title" type="text" style="width:120px;" autosize></i-Input>
+					</Form-Item>
+				</i-form>
+			</Modal>
+			<Modal
+				v-model="edit_row_box"
+				:title="edit_row_title"
+				@on-ok="saveRowOk"
+				@on-cancel="cancel">
+				<i-form  :model="show_table" :label-width="120">
+					<Form-Item v-for="(item,index) in show_table.edit_json" v-if="item.s_display!='unedit'&&item.s_display!='uneditsee'" :label="item.s_title!=''?item.s_title:item.name">
+						<i-Input v-if="item.s_type=='text'||item.s_type=='relate_text'"
+							v-model="edit_row_data[item.name]" style="width:160px;" :maxlength="item.length"></i-Input>
+						<i-Input v-if="item.s_type=='longtext'"
+							v-model="edit_row_data[item.name]" show-word-limit :maxlength="item.length" style="width:320px;"></i-Input>
+						<i-Input v-if="item.s_type=='areatext'"
+							v-model="edit_row_data[item.name]" type="textarea" show-word-limit :maxlength="item.length" style="width:320px;"></i-Input>
+						<i-Input v-if="item.s_type=='password'"
+							v-model="edit_row_data[item.name]" type="password" style="width:160px;"  placeholder="输入密码" password ></i-Input>
+						<Input-Number v-if="item.s_type=='num'||item.s_type=='relate_id'"
+							precision="0" style="" v-model="edit_row_data[item.name]"></Input-Number>
+						<Input-Number v-if="item.s_type=='bignum'"
+							:min="-9223372036854775807" :max="9223372036854775807" precision="0" v-model="edit_row_data[item.name]" style="width:200px;"></Input-Number>
+						<Input-Number v-if="item.s_type=='decimal'"
+							v-model="edit_row_data[item.name]" :step="0.1" style="width:100px;"></Input-Number>
+						<i-Switch v-if="item.s_type=='checkbox'" v-model="edit_row_data[item.name]" size="large" :true-value="0" :false-value="1">
+							<span slot="open">{{item.s_data.check_txt.on}}</span>
+							<span slot="close">{{item.s_data.check_txt.off}}</span>
+						</i-Switch>
+						<i-Select v-if="item.s_type=='select'" v-model="edit_row_data[item.name]" style="width:200px">
+							<i-Option v-for="sel_item in item.s_data.select_list" :value="sel_item.key">{{ sel_item.name }}</Option>
+						</i-Select>
+						<i-Select v-if="item.s_type=='relate_select'" v-model="edit_row_data[item.name]" style="width:200px">
+							<i-Option v-for="sel_item in getRelateData([],item.s_data.relate.sql,item.s_data.relate.key,item.s_data.relate.title)" :value="sel_item.key">{{ sel_item.title }}</Option>
+						</i-Select>
+						<Date-Picker v-if="item.s_type=='date'"
+							type="date" style="width: 120px" format="yyyy-MM-dd" :value="edit_row_data[item.name]" @on-change="(datatime)=>{edit_row_data[item.name]=datatime}"></Date-Picker>
+						<Date-Picker v-if="item.s_type=='time'"
+							type="time" style="width: 120px" format="HH:mm:ss" :value="edit_row_data[item.name]" @on-change="(datatime)=>{edit_row_data[item.name]=datatime}"></Date-Picker>
+						<Date-Picker v-if="item.s_type=='datetime'"
+							type="datetime" style="width: 200px" format="yyyy-MM-dd HH:mm:ss" :value="edit_row_data[item.name]" @on-change="(datatime)=>{edit_row_data[item.name]=datatime}"></Date-Picker>
+						<Date-Picker v-if="item.s_type=='timestamp'"
+							type="datetime" style="width: 200px" format="yyyy-MM-dd HH:mm:ss" :value="edit_row_data[item.name]" @on-change="(datatime)=>{edit_row_data[item.name]=datatime}"></Date-Picker>
+						<Upload multiple 
+							 v-if="item.s_type=='img'"
+							action="/backstage_api/content/upload_material_img"
+							:show-upload-list="false"
+							:max-size="2048"
+							:on-success="(res)=>uploadImgSuccess(res,item)"
+							style="display: inline-block;">
+							<Avatar :src="edit_row_data[item.name]" shape="square" icon="ios-person" size="large" style="cursor: pointer;" title="点击上传"/>
+						</Upload>
+						<i-button v-if="item.s_type=='article'" icon="ios-list-box-outline" @click="editArticle(edit_row_data[item.name],item.name,item.s_data.upload_url)">编辑</i-button>
+						<span v-if="item.s_type=='article'" style="margin-left: 10px;">{{edit_row_data[item.name]!=undefined?edit_row_data[item.name].length:''}}字</span>
+					</Form-Item>
+				</i-form>
+			</Modal>
+			<Modal
+				v-model="edit_article_box"
+				title="编辑文章"
+				width="800px"
+				@on-ok="editArticleOk"
+				@on-cancel="cancel">
+				<textarea id="tinymce"></textarea>
+			</Modal>
+			<Modal :title="visible_name" v-model="visible_box">
+				<img :src="visible_img" v-if="visible_box" style="width: 100%">
+			</Modal>
+        </template>
+    </div>
+</body>
+<script type="text/javascript">
+	var vue = new Vue({
+		el: '#app',
+		data: {
+			dbs:[],
+			hide_utb:'隐藏未定义',
+			init_table_box:false,
+			set_table_struct:[],
+			select_list_box:false,
+			select_key:{s_data:{select_list:[]}},
+			init_table_args:{
+				db:null,
+				table:null
+			},
+			show_table:{
+				columns:[],
+				data:[],
+				total:0,
+				rank:'降序',
+				page:1,
+				limit:10,
+				json:[],
+				edit_json:[]
+			},
+			tab_db:'no',
+			tab_table:'no',
+			edit_row_title:'修改数据',
+			edit_row_box:false,
+			edit_row_data:{},
+			edit_row_only:{
+				key:'id',
+				val:0
+			},
+			edit_article_box:false,
+			edit_article_value:'',
+			edit_article_row:'',
+			display_list:[
+				{
+					name:'正常显示',
+					type:'show'
+				},{
+					name:'禁止显示',
+					type:'unsee'
+				},{
+					name:'禁止编辑',
+					type:'unedit'
+				},{
+					name:'禁止编辑和显示',
+					type:'uneditsee'
+				}
+			],
+			t_select_list:[],
+			t_check_list:[],
+			t_img_list:[],
+			t_relate_list:[],
+			visible_box:false,
+			visible_name:'',
+			visible_img:'',
+			relate_box:false,
+			relate_key:null
+		},
+		mounted() {
+			this.update();
+			
+		},
+		methods: {
+			update() {
+				this.dbs=wt.get('/backstage_api/db/get_dbs');
+			},
+            initDB(db) {
+				let res=wt.get('/backstage_api/db/init_db',{db:db});
+				if(res=='true'){
+					this.hide_utb='显示';
+					this.update();
+				}else{
+					this.$Message.error('初始化失败');
+				}
+			},
+			initTable(db,table,keys) {
+				this.set_table_struct=[];
+				for(let i in keys){
+					let struct={
+						name:keys[i].name,
+						type:keys[i].dtype,
+						length:keys[i].length,
+						is_null:keys[i].is_null=='YES',
+						comment:keys[i].comment,
+						s_title:keys[i].comment,
+						s_display:'show',
+						s_type:'text',
+						s_data:{
+							size:keys[i].length,
+							min:0,
+							max:10,
+							check_txt:{
+								on:'开启',
+								off:'关闭'
+							},
+							select_list:[],
+							relate:{
+								sql:'',
+								key:'',
+								title:''
+							}
+						},
+						s_slist:this.getTypeList(keys[i])
+					};
+					struct.s_type=struct.s_slist[0].type;
+					if(struct.name=='id'&&struct.s_title==''){
+						struct.s_title='序号';
+						struct.s_display='unedit';
+					}
+					this.set_table_struct.push(struct);
+				}
+				this.init_table_box=true;
+				
+				this.init_table_args.db=db;
+				this.init_table_args.table=table;
+			},
+			initTableOk() {
+				let res=wt.get('/backstage_api/db/init_table',{
+					db:this.init_table_args.db,
+					table:this.init_table_args.table,
+					struct:wt.toSTR(this.set_table_struct)});
+				if(res=='true'){
+					this.update();
+					this.updateTable(this.tab_table);
+				}else{
+					this.$Message.error('初始化失败');
+				}
+			},
+			cancel() {
+			},
+			getTypeList(key) {
+				let list=[];
+				if(key.dtype=='varchar'){
+					list.push({
+						name:'文本',
+						type:'text'
+					});
+					list.push({
+						name:'长文本',
+						type:'longtext'
+					});
+					list.push({
+						name:'域文本',
+						type:'areatext'
+					});
+					list.push({
+						name:'密码',
+						type:'password'
+					});
+					list.push({
+						name:'列表选择',
+						type:'select'
+					});
+					list.push({
+						name:'关联文本',
+						type:'relate_text'
+					});
+					list.push({
+						name:'关联选择',
+						type:'relate_select'
+					});
+					list.push({
+						name:'图片',
+						type:'img'
+					});
+				}
+				if(key.dtype=='text'||key.dtype=='mediumtext'||key.dtype=='longtext'||key.dtype=='blob'||key.dtype=='mediumblob'||key.dtype=='longblob'){
+					list.push({
+						name:'文章',
+						type:'article'
+					});
+				}
+				if(key.dtype=='int'||key.dtype=='long'){
+					list.push({
+						name:'数字',
+						type:'num'
+					});
+					list.push({
+						name:'开关',
+						type:'checkbox'
+					});
+					list.push({
+						name:'关联ID',
+						type:'relate_id'
+					});
+					list.push({
+						name:'关联选择',
+						type:'relate_select'
+					});
+				}
+				if(key.dtype=='bigint'){
+					list.push({
+						name:'大数字',
+						type:'bignum'
+					});
+				}
+				if(key.dtype=='float'||key.dtype=='double'||key.dtype=='decimal'){
+					list.push({
+						name:'小数',
+						type:'decimal'
+					});
+				}
+				if(key.dtype=='timestamp'){
+					list.push({
+						name:'时间戳',
+						type:'timestamp'
+					});
+				}
+				if(key.dtype=='datetime'){
+					list.push({
+						name:'日期时间',
+						type:'datetime'
+					});
+				}
+				if(key.dtype=='date'){
+					list.push({
+						name:'日期',
+						type:'date'
+					});
+				}
+				if(key.dtype=='time'){
+					list.push({
+						name:'时间',
+						type:'time'
+					});
+				}
+				return list;
+			},
+			editSelect(key) {
+				this.select_key=key;
+				this.select_list_box=true;
+			},
+			selectListOk() {
+				
+			},
+			addSelect() {
+				this.select_key.s_data.select_list.push({
+					name:'',
+					key:''
+				});
+			},
+			delSelect(index) {
+				this.select_key.s_data.select_list.splice(index,1);
+			},
+			rowDblClick() {
+				
+			},
+			updateDB(db) {
+				this.tab_db=db;
+				this.tab_table='no';
+				let db_item=wt.getItemByArr('name',db,this.dbs);
+				if(Object.keys(db_item.struct.table_json).length==0)this.hide_utb='显示';
+			},
+			updateTable(table) {
+				this.tab_table=table;
+				let db=wt.getItemByArr('name',this.tab_db,this.dbs);
+				if(db.struct.table_json[table]!=undefined){
+					let keys=[];
+					let tb_json=wt.get('/backstage_api/db/get_table_json',{db:this.tab_db,table:this.tab_table});
+					
+					let columns=[];
+					
+					let t_s_l=[];
+					let t_c_l=[];
+					let t_img_l=[];
+					let t_relate_l=[];
+					
+					
+					for(let i in tb_json){
+						if(tb_json[i].s_display!='uneditsee'){
+							keys.push(tb_json[i].name);
+						}
+						if(tb_json[i].s_display!='unsee'&&tb_json[i].s_display!='uneditsee'){
+							let column={
+								title:tb_json[i].s_title?tb_json[i].s_title:tb_json[i].name,
+								key:tb_json[i].name
+							};
+							if(tb_json[i].s_type=='select'){
+								let select_list=[];
+								for(let j in tb_json[i].s_data.select_list){
+									select_list[tb_json[i].s_data.select_list[j].key]=tb_json[i].s_data.select_list[j].name;
+								}
+								t_s_l.push({
+									key:tb_json[i].name,
+									select_list:select_list
+								});
+								column.slot=tb_json[i].name;
+							}
+							if(tb_json[i].s_type=='checkbox'){
+								t_c_l.push({
+									key:tb_json[i].name,
+									on:tb_json[i].s_data.check_txt.on,
+									off:tb_json[i].s_data.check_txt.off,
+								});
+								column.slot=tb_json[i].name;
+							}
+							if(tb_json[i].s_type=='img'){
+								t_img_l.push({
+									key:tb_json[i].name
+								});
+								column.slot=tb_json[i].name;
+							}
+							if(tb_json[i].s_type.indexOf('relate')>-1){
+								t_relate_l.push({
+									key:tb_json[i].name,
+									s_type:tb_json[i].s_type,
+									relate:tb_json[i].s_data.relate
+								});
+								column.slot=tb_json[i].name;
+							}
+							columns.push(column);
+						}
+					}
+					
+					this.t_select_list=t_s_l;
+					this.t_check_list=t_c_l;
+					this.t_img_list=t_img_l;
+					this.t_relate_list=t_relate_l;
+					
+					columns.push({
+						title:'操作',
+						slot:'action',
+						align:'center'
+					});
+					
+					let res=wt.get('/backstage_api/db/get_table_data',{
+						db:this.tab_db,
+						table:this.tab_table,
+						keys:wt.toSTR(keys),
+						page:this.show_table.page,
+						limit:this.show_table.limit,
+						desc:this.show_table.rank=='降序'
+					});
+					
+					this.show_table.columns=columns;
+					this.show_table.data=res.data;
+					this.show_table.total=res.total;
+					this.show_table.json=tb_json;
+					let ed_json=[];
+					for(let i in tb_json){
+						if(tb_json[i].s_display!='unedit'&&tb_json[i].s_display!='uneditsee')ed_json.push(tb_json[i]);
+					}
+					this.show_table.edit_json=ed_json;
+				}
+				
+				
+			},
+			refreshTable() {
+				this.updateTable(this.tab_table);
+				this.$Message.success('刷新完成！');
+			},
+			changeRank() {
+				this.updateTable(this.tab_table);
+			},
+			pageChange(page) {
+				this.show_table.page=page;
+				this.updateTable(this.tab_table);
+			},
+			resetTable(db,table,keys){
+				this.set_table_struct=wt.get('/backstage_api/db/get_table_json',{db:db,table:table});
+				
+				this.init_table_box=true;
+				
+				this.init_table_args.db=db;
+				this.init_table_args.table=table;
+			},
+			addRow() {
+				this.edit_row_title="添加数据";
+				let new_row={};
+				
+				for(let i in this.show_table.json){
+					if(this.show_table.json[i].s_display!='unedit'&&this.show_table.json[i].s_display!='uneditsee'){
+						let def='';
+						if(this.show_table.json[i].type=='int')def=0;
+						new_row[this.show_table.json[i].name]=def;
+					}
+				}
+				this.edit_row_data=new_row;
+				this.edit_row_box=true;
+			},
+			eidtRow(row) {
+				this.edit_row_title="修改数据";
+				
+				for(let i in this.show_table.json){
+					if(this.show_table.json[i].name==this.edit_row_only.key){
+						this.edit_row_only.val=row[this.show_table.json[i].name];
+					}
+					if(this.show_table.json[i].s_display!='unedit'&&this.show_table.json[i].s_display!='uneditsee'){
+						this.edit_row_data[this.show_table.json[i].name]=row[this.show_table.json[i].name];
+					}
+					if(this.show_table.json[i].s_type=='password'){
+						this.edit_row_data[this.show_table.json[i].name]='';
+					}
+				}
+				this.edit_row_box=true;
+			},
+			saveRowOk() {
+				let data={};
+				for(let i in this.show_table.json){
+					if(this.show_table.json[i].s_display!='unedit'&&this.show_table.json[i].s_display!='uneditsee'){
+						let key=this.show_table.json[i].name;
+						data[key]=this.edit_row_data[key];
+						if(this.show_table.json[i].s_type=='password'){
+							data[key]=md5(data[key]);
+						}
+					}
+				}
+				if(this.edit_row_title=="添加数据"){
+					let res=wt.get('/backstage_api/db/add_table_data',{db:this.tab_db,table:this.tab_table,data:wt.toSTR(data)});
+					if(res&&res.affectedRows>0){
+						this.updateTable(this.tab_table);
+						this.$Message.success('添加成功！');
+					}else{
+						this.$Message.error('添加失败，有问题请联系管理员！');
+					}
+				}else{
+					let res=wt.get('/backstage_api/db/save_table_data',{db:this.tab_db,table:this.tab_table,data:wt.toSTR(data),id:this.edit_row_only.val});
+					if(res&&res.affectedRows>0){
+						this.updateTable(this.tab_table);
+						this.$Message.success('修改成功！');
+					}else{
+						this.$Message.error('修改失败，有问题请联系管理员！');
+					}
+				}
+			},
+			delRow(row) {
+				let res=wt.get('/backstage_api/db/del_table_data',{db:this.tab_db,table:this.tab_table,id:row[this.edit_row_only.key]});
+				if(res&&res.affectedRows>0){
+					this.updateTable(this.tab_table);
+					this.$Message.success('删除成功！');
+				}else{
+					this.$Message.error('删除失败，有问题请联系管理员！');
+				}
+			},
+			editArticle(value,row,img_upload_url) {
+				this.edit_article_row=row;
+				this.edit_article_box=true;
+				let self=this;
+				tinymce.init({
+					selector:'#tinymce',
+					//plugins: 'print preview importcss searchreplace autosave save directionality visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern noneditable help charmap quickbars emoticons',
+					plugins:'fullscreen image link media table imagetools codesample nonbreaking',
+					toolbar:'styleselect | fontsizeselect forecolor backcolor | link image media table codesample| alignleft aligncenter alignright | fullscreen',
+					codesample_global_prismjs: true,
+					nonbreaking_force_tab: true,
+					images_upload_handler:((blobInfo, success, failure)=>{
+						var form = new FormData();
+						form.append('files', blobInfo.blob(), blobInfo.filename());
+						$.ajax({
+							url: '/backstage_api/content/upload_material_img',
+							type: "post",
+							data: form,
+							processData: false,
+							contentType: false,
+							success: function(data) {
+								success(data);
+							},
+							error: function(e) {
+								self.$Message.error('上传失败！');
+							}
+				        });
+					}),
+					file_picker_callback:((callback, value, meta)=>{
+						var input = document.createElement('input');
+						input.setAttribute('type', 'file');
+						input.onchange = function() {
+							var file = this.files[0];
+							var form = new FormData();
+							form.append("files", file);
+							$.ajax({
+								url: '/backstage_api/content/upload_material_file',
+								type: "post",
+								data: form,
+								processData: false,
+								contentType: false,
+								success: function(data) {
+									callback(data);
+								},
+								error: function(e) {
+									self.$Message.error('上传失败！');
+								}
+							});
+						};
+						input.click();
+					}),
+					paste_data_images: true,
+					convert_urls: false,
+					height:400,
+					language:'zh_CN',
+					setup: (editor)=> {
+						editor.on('init', ()=>{
+							editor.setContent(value);
+							editor.on('input change undo redo', ()=>{
+								self.edit_article_value = editor.getContent();
+							});
+						});
+					}
+				});
+			},
+			editArticleOk() {
+				this.edit_row_data[this.edit_article_row]=this.edit_article_value;
+			},
+			uploadImgSuccess(res,item){
+				this.edit_row_data[item.name]=res;
+				this.$forceUpdate();
+			},
+			visitImg(img){
+				this.visible_name=img.split('_').length>1?img.split('_')[1]:img;
+				this.visible_img=img;
+				this.visible_box=true;
+			},
+			editRelate(key){
+				this.relate_key=key;
+				this.relate_box=true;
+			},
+			getRelateData(row,sql,key,title){
+				return wt.get('/backstage_api/db/get_relate_data',{
+					db:this.tab_db,
+					row:wt.toSTR(row),
+					sql:sql,
+					key:key,
+					title:title
+				});
+			}
+        }
+	});
+</script>
+</html>

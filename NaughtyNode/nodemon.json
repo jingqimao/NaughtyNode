@@ -1,0 +1,18 @@
+{
+	"restartable": "rs",
+	"ignore": [
+	],
+	"verbose": false,
+	"execMap": {
+		"js": "node --harmony"
+	},
+	"watch": [
+		"conf/**",
+		"../webapp/conf/**",
+		"setting.yml"
+	],
+	"env": {
+		"NODE_ENV": "development"
+	},
+	"ext": "yml js json"
+}

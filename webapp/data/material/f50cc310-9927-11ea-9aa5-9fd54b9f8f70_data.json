@@ -1,0 +1,33 @@
+{
+	"type": "list",
+	"data_type": "str",
+	"data": {
+		"val": "",
+		"arr": [],
+		"map": [],
+		"list": [
+			{
+				"title": "测试标题",
+				"author": "陈XX"
+			},
+			{
+				"title": "测试标题2",
+				"author": "陈X"
+			}
+		],
+		"list_columns": [
+			{
+				"key": "title",
+				"name": "标题",
+				"type": "str"
+			},
+			{
+				"key": "author",
+				"name": "作者",
+				"type": "str"
+			}
+		],
+		"node": [],
+		"node_columns": []
+	}
+}

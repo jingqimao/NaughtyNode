@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="/sys_static/js/jquery-3.3.1.min.js"></script>
+	<script src="/sys_static/js/wheel_utils.js"></script>
+	<script src="/sys_static/js/vue.min.js"></script>
+	<link rel="stylesheet" href="/sys_static/iview2/styles/iview.css">
+	<script src="/sys_static/iview2/iview.min.js"></script>
+	
+	<style>
+		#app{
+			padding:20px;
+		}
+	</style>
+</head>
+<body>
+	<div id="app">
+		<template>
+			<i-button :disabled="f_sys.url.split('/').length<=1" icon="ios-arrow-back" @click="f_sys.back(f_sys)">后退</i-button>
+			<Upload multiple 
+				action="/backstage_api/content/upload" 
+				:data="f_sys.uploadData"
+				:show-upload-list="false"
+				:on-success="uploadSuc"
+				:on-error="uploadErr"
+				:max-size="2048"
+				style="display: inline-block;">
+				<i-button icon="ios-cloud-upload">上传</i-button>
+			</Upload>
+			<i-button icon="ios-folder" @click="newDir">新建文件夹</i-button>
+			<i-button v-if="sel_files.length>0" icon="md-move" @click="moveSel">移动 {{sel_files.length}} 项</i-button>
+			<i-button v-if="move_files.length>0" icon="md-copy" @click="copy">粘贴 {{move_files.length}} 项</i-button>
+			<i-button v-if="sel_files.length>0" type="error" icon="md-trash" @click="delSel">删除 {{sel_files.length}} 项</i-button>
+			<Radio-Group v-model="view_type" type="button" style="float: right;">
+				<Radio label="list" icon="ios-apps"><Icon type="md-list" /></Radio>
+				<Radio label="block" icon="ios-apps"><Icon type="ios-apps" /></Radio>
+			</Radio-Group>
+			<Divider></Divider>
+			<span style="display: inline-block;position: absolute;top: 78px;">{{f_sys.url}}</span>
+			<div>
+				<template v-if="view_type=='list'">
+					<i-table
+						ref="selection"
+						context-menu
+						show-context-menu
+						:columns="columns"
+						:data="f_sys.show_files"
+						@on-row-dblclick="rowDblClick"
+						@on-selection-change="selectionChange"
+						@on-contextmenu="handleContextMenu">
+						<template slot-scope="{ row }" slot="name">
+							<strong>{{row.name}}</strong>
+						</template>
+						<template slot-scope="{ row }" slot="type">
+							{{ row.type=='dir'?'文件夹':row.suffix }}
+						</template>
+						<template slot-scope="{ row }" slot="size">
+							{{ row.type=='file'?getFileSize(row.size):'' }}
+						</template>
+						<template slot="contextMenu">
+							<span style="display: inline-block;font-weight: bold;padding-left: 15px;width: 100%;">{{cmenu_row.name}}</span>
+							<Dropdown-Item v-if="cmenu_row.type=='dir'" @click.native="contextMenuGo">进入</Dropdown-Item>
+							<Dropdown-Item v-if="cmenu_row.type=='file'" @click.native="contextMenuUrl">访问路径</Dropdown-Item>
+							<Dropdown-Item v-if="cmenu_row.type=='file'" @click.native="contextMenuDownload">下载</Dropdown-Item>
+							<Dropdown-Item @click.native="contextMenuMove">移动</Dropdown-Item>
+							<Dropdown-Item @click.native="contextMenuRename">重命名</Dropdown-Item>
+							<Dropdown-Item @click.native="contextMenuDelete" style="color: #ed4014">删除</Dropdown-Item>
+						</template>
+					</i-table>
+				</template>
+				<Modal
+					v-model="rename_box"
+					:title="rename_title"
+					@on-ok="renameOk"
+					@on-cancel="cancel">
+					<i-input v-model="rename" :placeholder="oldname"></i-input>
+				</Modal>
+			</div>
+		</template>
+    </div>
+</body>
+<script type="text/javascript">
+	var vue = new Vue({
+		el: '#app',
+		data: {
+			view_type:'list',
+			columns: [
+					{
+                        type: 'selection',
+                        width: 60,
+                        align: 'center'
+                    },
+                    {
+                        title: '文件名',
+                        key: 'name',
+						slot:'name',
+						sortable: true
+                    },
+                    {
+                        title: '类型',
+                        key: 'type',
+						slot:'type',
+						sortable: true,
+						sortType:'asc'
+                    },
+                    {
+                        title: '大小',
+                        key: 'size',
+						slot:'size',
+						sortable: true
+                    },
+                    {
+                        title: '修改时间',
+                        key: 'utime',
+						sortable: true
+                    }
+                ],
+			contextLine:0,
+			cmenu_row:{},
+			copy_old_url:'',
+			sel_files:[],
+			move_files:[],
+			f_sys:{
+				url:'',
+				show_files:[],
+				uploadData:{url:'/'},
+				update() {
+					this.show_files=wt.get('/backstage_api/content/get_files',{url:this.url});
+				},
+				goin(dir) {
+					this.url=this.url+dir.name+'/';
+					this.update();
+				},
+				back(self) {
+					if(self.url.indexOf('/')>-1){
+						if(self.url.split('/').length>2){
+							let urlx=url.substring(0,self.url.length-1);
+							self.url=urlx.substring(0,self.url.lastIndexOf('/')+1);
+						}else{
+							self.url='';
+						}
+						self.update();
+					}
+				}
+			},
+			rename_title:'',
+			rename_box:false,
+			new_dir:false,
+			oldname:'',
+			rename:''
+		},
+		mounted() {
+			this.f_sys.update();
+			
+		},
+		methods: {
+			rowDblClick(row) {
+				if(row.type=='dir'){
+					this.f_sys.goin(row);
+				}
+			},
+			selectionChange(selection) {
+				this.sel_files=selection;
+			},
+			uploadSuc(res) {
+				this.$Message.success('上传成功！');
+				this.f_sys.update();
+			},
+			uploadErr() {
+				this.$Message.error('上传失败！');
+			},
+			newDir() {
+				this.rename_title='新建文件夹';
+				this.oldname='输入文件夹名称..';
+				this.rename='新建文件夹';
+				this.rename_box=true;
+				this.new_dir=true;
+			},
+			moveSel(){
+				this.move_files=this.sel_files;
+				this.$refs.selection.selectAll(false);
+				this.copy_old_url=this.f_sys.url;
+			},
+			copy(){
+				if(this.copy_old_url!=this.f_sys.url){
+					for(var i in this.move_files){
+						let res=wt.get('/backstage_api/content/move',{url:this.copy_old_url,name:this.move_files[i].name,new_url:this.f_sys.url});
+						if(res!='true'){
+							this.$Message.error('移动失败');
+						}
+					}
+					this.f_sys.update();
+				}
+				this.move_files=[];
+			},
+			delSel(){
+				this.$Modal.confirm({
+                    title: '确定要删除选中的 '+this.sel_files.length+' 项吗？',
+                    onOk: () => {
+						for(var i in this.sel_files){
+							let res=wt.get('/backstage_api/content/del',{url:this.f_sys.url,name:this.sel_files[i].name,type:this.sel_files[i].type});
+							if(res!='true'){
+								this.$Message.error('删除失败');
+							}
+						}
+						this.f_sys.update();
+						this.$refs.selection.selectAll(false);
+                    }
+                });
+			},
+            handleContextMenu (row) {
+                this.cmenu_row=row;
+            },
+			contextMenuGo() {
+				this.f_sys.goin(this.cmenu_row);
+			},
+            contextMenuUrl () {
+				wt.copyText(this.cmenu_row.url);
+				this.$Message.success('已复制路径到粘贴板！');
+            },
+			contextMenuDownload () {
+				wt.jump('/backstage_api/content/download?url='+this.f_sys.url+'&name='+this.cmenu_row.name);
+            },
+			contextMenuMove () {
+                this.move_files=[];
+				this.move_files.push(this.cmenu_row);
+				this.copy_old_url=this.f_sys.url;
+            },
+			contextMenuRename () {
+				this.rename_title='修改文件名';
+				this.oldname=this.cmenu_row.name;
+				this.rename=this.cmenu_row.name;
+				this.rename_box=true;
+				this.new_dir=false;
+            },
+            contextMenuDelete () {
+				this.$Modal.confirm({
+                    title: '确定要删除"'+this.cmenu_row.name+'"吗？',
+                    onOk: () => {
+                        let res=wt.get('/backstage_api/content/del',{url:this.f_sys.url,name:this.cmenu_row.name,type:this.cmenu_row.type});
+						if(res=='true'){
+							this.f_sys.update();
+						}else{
+							this.$Message.error('删除失败');
+						}
+                    }
+                });
+                
+            },
+			renameOk() {
+				if(this.rename!=''){
+					if(this.new_dir){
+						let res=wt.get('/backstage_api/content/new_dir',{url:this.f_sys.url,dir_name:this.rename});
+						if(res=='true'){
+							this.f_sys.update();
+						}else{
+							if(res.code=="EEXIST")this.$Message.error('文件夹已存在!');
+						}
+					}else{
+						let res=wt.get('/backstage_api/content/rename',{url:this.f_sys.url,old_name:this.oldname,new_name:this.rename});
+						if(res=='true'){
+							this.f_sys.update();
+						}else{
+							if(res.code=="EPERM")this.$Message.error('文件名重名!');
+						}
+					}
+				}
+			},
+			cancel() {
+			},
+			getFileSize(value) {
+				if(null==value||value==''){
+		          return "0字节";
+				}
+				var unitArr = new Array("字节","KB","MB","GB","TB","PB","EB","ZB","YB");
+				var index=0;
+				var srcsize = parseFloat(value);
+				index=Math.floor(Math.log(srcsize)/Math.log(1024));
+				var size =srcsize/Math.pow(1024,index);
+				size=parseFloat(size.toFixed(1));
+				return size+unitArr[index];
+			}
+        }
+	});
+</script>
+</html>

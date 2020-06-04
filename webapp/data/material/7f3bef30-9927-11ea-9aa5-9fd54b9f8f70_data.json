@@ -1,0 +1,16 @@
+{
+	"type": "arr",
+	"data_type": "str",
+	"data": {
+		"val": "",
+		"arr": [
+			"123",
+			"456"
+		],
+		"map": [],
+		"list": [],
+		"list_columns": [],
+		"node": [],
+		"node_columns": []
+	}
+}

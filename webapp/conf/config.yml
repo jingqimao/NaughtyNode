@@ -1,0 +1,78 @@
+
+#项目配置
+node:
+    #节点名称
+    name: sys_main
+    #访问端口
+    port: 80
+    #路径替换
+    #replace:
+        
+        
+    #转发映射
+    forward:
+        /index: :~/view/home.html
+        
+        
+    #重定向跳转
+    #redirect:
+        
+    #权限拦截
+    #intercept:
+        #/sys/(.+?):
+        #    permit: manager,supermanager
+        #    ignore:
+        #        - /sys/sys/login
+        
+    #自定义扫描路径
+    #controller:
+    #    - :~/cons
+    #service:
+    #    - :~/sers
+    
+    #静态文件缓存时间
+    staticCacheTime: 0
+    
+    #作为服务中心
+    #center: true
+    
+    #作为消费者
+    #client: 
+    #    type: http
+    #    center: http://localhost
+
+    #会话设置
+    session: 
+        #redis: test
+        time: 60
+        refresh: 2
+    
+    #找不到资源页面
+    #404: 
+    #    url: /404.html
+    #    path: :~/view/404.html
+
+    #固化第三方请求get
+    #get:
+    #    /weather_api: http://t.weather.sojson.com/api/weather/city/101030100
+    
+#数据库     
+#db:
+#    test: 
+#        type: mysql
+#        host: 
+#        user: 
+#        password: 
+#        database: 
+#        dateStrings: true
+        
+#    test2:
+#        type: mongodb
+#        host: 
+#        db: 
+
+#redis缓存  
+#redis:
+#    test:
+#        host: localhost
+#        port: 6379

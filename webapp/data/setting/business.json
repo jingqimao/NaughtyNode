@@ -1,0 +1,13 @@
+{
+	"sys": {
+		"user": {
+			"db": "",
+			"table": ""
+		},
+		"sys_message": {
+			"db": "",
+			"table": ""
+		}
+	},
+	"ext": []
+}

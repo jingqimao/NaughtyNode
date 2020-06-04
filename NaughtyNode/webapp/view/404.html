@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>404</title>
+	<script src="/sys_static/js/jquery-3.3.1.min.js"></script>
+	<script src="/sys_static/js/wheel_utils.js"></script>
+	<script src="/sys_static/js/vue.min.js"></script>
+	<link rel="stylesheet" href="/sys_static/iview2/styles/iview.css">
+	<script src="/sys_static/iview2/iview.min.js"></script>
+	
+	<style>
+		body{
+			text-align: center;
+		}
+		.center{
+			display: flex;
+			width: 40%;
+			min-width: 500px;
+			margin: 0 auto;
+			margin-top: 20vh;
+		}
+		.center .left{
+			width: 60%;
+			padding-top: 100px;
+		}
+		.center .left h1{
+			font-size: 70px;
+			color: #007a87;
+			text-shadow: 5px 5px 4px #dedede;
+		}
+		.center .left p{
+			font-size: 22px;
+			color: #007a87;
+		}
+		.center .right{
+			flex: auto;
+		}
+		.center .left .tip{
+			font-size: 16px;
+		}
+	</style>
+</head>
+<body>
+	<div id="app" class="center">
+		<div class="left">
+			<h1>404</h1>
+			<p>找不到相关页面。</p>
+			<br>
+			<p class="tip">{{s}} 秒后回到首页</p>
+		</div>
+		<div class="right">
+			<img src="/sys_static/img/404.gif"/>
+		</div>
+	</div>
+</body>
+<script type="text/javascript">
+	var vue = new Vue({
+		el: '#app',
+		data: {
+			s:10
+		},
+		mounted() {
+			let self=this;
+			let t=setInterval(function(){
+				self.s--;
+				if(self.s==0){
+					clearInterval(t);
+					wt.jump('/');
+				}
+			},1000);
+		},
+		methods: {
+			
+        }
+	});
+</script>
+</html>

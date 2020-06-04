@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="/sys_static/js/jquery-3.3.1.min.js"></script>
+	<script src="/sys_static/js/wheel_utils.js"></script>
+	<script src="/sys_static/js/vue.min.js"></script>
+	<link rel="stylesheet" href="/sys_static/iview2/styles/iview.css">
+	<script src="/sys_static/iview2/iview.min.js"></script>
+	
+	<style>
+		#app{
+			padding:20px;
+		}
+		.ivu-poptip-body{
+			text-align: left;
+		}
+		.help{
+			text-align: center;
+			margin-top: 100px;
+			color: #cacaca;
+		}
+		
+		.node{
+			width: 15.56%;
+			display: inline-block;
+			margin-right: 0.5%;
+			margin-bottom: 0.5%;
+			cursor: pointer;
+		}
+		.node_icon{
+			font-size: 21px;
+			margin-right: 6px;
+		}
+		.node_ser_item{
+			text-indent: 10px;
+		}
+		
+		@media (max-width:1600px) {
+			.node{
+				width: 19.5%;
+			}
+		}
+		@media (max-width:1200px) {
+			.node{
+				width: 24.5%;
+			}
+		}
+		@media (max-width:992px) {
+			.node{
+				width: 49.5%;
+			}
+		}
+		@media (max-width:768px) {
+			.node{
+				width: 49.5%;
+			}
+		}
+		@media (max-width:576px) {
+			.node{
+				width: 100%;
+				margin-right: 0;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div id="app">
+		<template>
+			<div class="help" v-if="nodes.length==0">
+				<h1>无系统节点</h1>
+				<h3>1.需要设置为服务中心或节点</h3>
+				<h3>2.未从中心获取到服务列表</h3>
+			</div>
+			<div style="font-size:0;">
+				<Card class="node" v-for="node in nodes" @dblclick.native="look(node)">
+					<p slot="title"><Icon class="node_icon" type="md-cloud-outline"></Icon> {{node.name}}</p>
+					<p>位置：{{node.url}}</p>
+					<p>服务：{{node.ser.length}}个</p>
+				</Card>
+			</div>
+        </template>
+		<Modal v-model="node_box" :title="look_title" footer-hide>
+			<List size="small">
+				<List-Item v-for="ser,index in look_node.ser" class="node_ser_item">
+					{{ser.name}}({{ser.args.toString()}})
+				</List-Item>
+			</List>
+		</Modal>
+    </div>
+</body>
+<script type="text/javascript">
+	var vue = new Vue({
+		el: '#app',
+		data: {
+			nodes:[],
+			node_box:false,
+			look_node:{},
+			look_title:'服务列表'
+		},
+		mounted() {
+			this.update();
+		},
+		methods: {
+			update(){
+				let res=wt.get('/backstage_api/sys/get_nodes');
+				if(res){
+					for(let i in res){
+						let ser=[];
+						for(let j in res[i].ser){
+							ser.push({
+								name:res[i].ser[j].name,
+								args:res[i].ser[j].args
+							});
+						}
+						this.nodes.push({
+							name:i.split('/')[2],
+							ser:ser,
+							url:res[i].url
+						});
+					}
+				}
+				console.log(res)
+			},
+			look(node){
+				this.node_box=true;
+				this.look_node=node;
+				this.look_title=node.name+' 服务列表';
+			}
+        }
+	});
+</script>
+</html>

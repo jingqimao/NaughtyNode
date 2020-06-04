@@ -1,0 +1,50 @@
+
+#基本主配置
+node:
+    #节点名称
+    name: main_node
+    #访问端口
+    port: 8080
+    #路径替换
+    replace:
+        /sys_static: ./webapp/view/static
+        /static: :~/view/static
+        /temp: :~/temp
+        
+    #转发映射
+    forward:
+        /index: ./webapp/view/home.html
+        /admin/login: ./webapp/view/backstage/login.html
+        /admin/((\w|-){2,20}): ./webapp/view/backstage/index.html
+        /admin-page/((\w|-){2,20}): ./webapp/view/backstage/page/{$1}.html
+        
+    #重定向跳转
+    redirect:
+        /: /index
+        /admin: /admin/console
+        
+    #权限拦截
+    intercept:
+        /admin(.+?):
+            permit: manager,supermanager
+            redirect: /admin/login
+            ignore:
+                - /admin/login
+                
+        /backstage_api/(.+?):
+            permit: manager,supermanager
+            ignore:
+                - /backstage_api/sys/login
+
+    #静态缓存时间
+    staticCacheTime: 31536000
+
+    #会话
+    session: 
+        time: 30
+        refresh: 2
+        
+    #找不到资源页面
+    404: 
+        url: /404.html
+        path: ./webapp/view/404.html

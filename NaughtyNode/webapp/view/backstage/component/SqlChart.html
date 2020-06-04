@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="/sys_static/echarts/echarts.min.js"></script>
+	<script src="/sys_static/echarts/theme/macarons.js"></script>
+	
+	<style>
+	</style>
+</head>
+<body>
+	<template id="SqlChart">
+		<div ref="sqlChart"></div>
+	</template>
+</body>
+<script type="text/javascript">
+	Vue.component('sql-chart',{
+		template:"#SqlChart",
+        props:{
+			data: Object
+		},
+		methods: {
+		},
+		mounted () {
+			let item=this.data;
+			
+			var myChart = echarts.init(this.$refs.sqlChart,'macarons');
+			var option=null;
+			if(item.charts=='zhifang'){
+				let res=wt.get('/sys/db/get_sql_data',{db:item.ops[0].db,sql:item.ops[0].sql});
+				let legend_data=[item.ops[0].title];
+				let xAxis_data=[];
+				let series={
+					name:item.ops[0].title,
+					data:[]
+				};
+				for(let i in item.ops[0].xkeys){
+					xAxis_data.push(item.ops[0].xkeys[i].title);
+					series.data.push(res[0][item.ops[0].xkeys[i].key]);
+				}
+				option = {
+					title: {
+						text: item.title
+					},
+					tooltip: {},
+					legend: {
+						data:legend_data
+					},
+					xAxis: {
+						data: xAxis_data
+					},
+					yAxis: {},
+					series: [{
+						name: series.name,
+						type: 'bar',
+						data: series.data
+					}]
+				};
+			}
+			if(item.charts=='bingzhuang'){
+				let res=wt.get('/sys/db/get_sql_data',{db:item.ops[0].db,sql:item.ops[0].sql});
+				let legend_data=[];
+				let xAxis_data=[];
+				let series={
+					name:item.ops[0].title,
+					data:[],
+					selected:{}
+				};
+				for(let i in item.ops[0].xkeys){
+					legend_data.push(item.ops[0].xkeys[i].title)
+					xAxis_data.push(item.ops[0].xkeys[i].title);
+					series.data.push({
+						name:item.ops[0].xkeys[i].title,
+						value:res[0][item.ops[0].xkeys[i].key]
+					});
+					series.selected[item.ops[0].xkeys[i].title]=true;
+				}
+				option = {
+					title: {
+						text: item.title,
+						left: 'center'
+					},
+					tooltip: {
+						trigger: 'item',
+						formatter: '{a} <br/>{b} : {c} ({d}%)'
+					},
+					legend: {
+						type: 'scroll',
+						orient: 'vertical',
+						right: 10,
+						top: 20,
+						bottom: 20,
+						data: legend_data,
+						selected: series.selected
+					},
+					series: [
+						{
+							name: series.name,
+							type: 'pie',
+							radius: '55%',
+							center: ['40%', '50%'],
+							data: series.data,
+							emphasis: {
+								itemStyle: {
+									shadowBlur: 10,
+									shadowOffsetX: 0,
+									shadowColor: 'rgba(0, 0, 0, 0.5)'
+								}
+							}
+						}
+					]
+				};
+			}
+			if(item.charts=='leida'){
+				let res=wt.get('/sys/db/get_sql_data',{db:item.ops[0].db,sql:item.ops[0].sql});
+				let legend_data=[];
+				let xAxis_data=[];
+				let series={
+					name:item.ops[0].title,
+					data:[]
+				};
+				let indicator_data=[];
+				for(let i in item.ops[0].xkeys){
+					legend_data.push(item.ops[0].xkeys[i].title)
+					xAxis_data.push(item.ops[0].xkeys[i].title);
+					series.data.push(res[0][item.ops[0].xkeys[i].key]);
+					indicator_data.push({
+						text:item.ops[0].xkeys[i].title,
+						max:item.ops[0].xkeys[i].max
+					});
+				}
+				option = {
+					title: {
+						text: item.title
+					},
+					tooltip: {
+						trigger: 'axis'
+					},
+					legend: {
+						left: 'center',
+						data: legend_data
+					},
+					radar: [
+						{
+							indicator: indicator_data,
+							center: ['50%', '50%'],
+							radius: 120
+						}
+					],
+					series: [
+						{
+							type: 'radar',
+							tooltip: {
+								trigger: 'item'
+							},
+							areaStyle: {},
+							data: [
+								{
+									value: series.data,
+									name: series.name
+								}
+							]
+						}
+					]
+				};
+			}
+			if(item.charts=='zhexian'){
+				let res=wt.get('/sys/db/get_sql_data',{db:item.ops[0].db,sql:item.ops[0].sql});
+				let legend_data=[];
+				let xAxis_data=[];
+				let series={
+					name:item.ops[0].title,
+					data:[]
+				};
+				for(let i in res){
+					xAxis_data.push(res[i][item.ops[0].ykeys]);
+				}
+				for(let i in item.ops[0].xkeys){
+					legend_data.push(item.ops[0].xkeys[i].title)
+					
+					let data=[];
+					for(let j in res){
+						data.push(res[j][item.ops[0].xkeys[i].key]);
+					}
+					series.data.push({
+						name:item.ops[0].xkeys[i].title,
+						type:'line',
+						smooth: true,
+						data:data
+					});
+				}
+				option = {
+					title: {
+						text: item.title
+					},
+					tooltip: {
+						trigger: 'axis'
+					},
+					legend: {
+						data: legend_data
+					},
+					xAxis: {
+						type: 'category',
+						boundaryGap: false,
+						data: xAxis_data
+					},
+					yAxis: {
+						type: 'value'
+					},
+					series: series.data
+				};
+			}
+
+			if(option!=null)myChart.setOption(option);
+			
+			window.addEventListener('resize',()=>{
+				myChart.resize();
+			});
+		}
+    });
+</script>
+</html>

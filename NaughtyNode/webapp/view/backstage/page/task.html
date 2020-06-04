@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="/sys_static/js/jquery-3.3.1.min.js"></script>
+	<script src="/sys_static/js/wheel_utils.js"></script>
+	<script src="/sys_static/js/vue.min.js"></script>
+	<link rel="stylesheet" href="/sys_static/iview2/styles/iview.css">
+	<script src="/sys_static/iview2/iview.min.js"></script>
+	
+	<style>
+		#app{
+			padding:20px;
+		}
+		.ivu-poptip-body{
+			text-align: left;
+		}
+	</style>
+</head>
+<body>
+	<div id="app">
+		<template>
+			<i-table border :columns="columns" :data="data">
+				<template slot-scope="{ row }" slot="run">
+					{{ row.run?'运行中':'待命' }}
+				</template>
+				<template slot-scope="{ row }" slot="last_time">
+					{{ wt.fmTime(row.last_time,'yyyy-MM-dd HH:mm:ss') }}
+				</template>
+				<template slot-scope="{ row, index }" slot="action">
+					<i-button v-if="!row.run" type="primary" size="small" style="margin-right: 5px" @click="run(index)">运行</i-button>
+					<i-button v-if="row.run" type="error" size="small" style="margin-right: 5px" @click="stop(index)">终止</i-button>
+				</template>
+			</i-table>
+			<Page :total="total" @on-change="changePage" style="text-align: center;margin-top: 20px;"/>
+			
+        </template>
+		
+    </div>
+</body>
+<script type="text/javascript">
+	var vue = new Vue({
+		el: '#app',
+		data: {
+			columns: [
+				{
+					title: '任务',
+					key: 'name'
+				},
+				{
+					title: '说明',
+					key: 'tip'
+				},
+				{
+					title: '定时',
+					key: 'time'
+				},
+				{
+					title: '状态',
+					key: 'run',
+					slot:'run'
+				},
+				{
+					title: '上线运行次数',
+					key: 'run_times'
+				},
+				{
+					title: '上次运行时间',
+					key: 'last_time',
+					slot:'last_time'
+				},
+				{
+					title: '操作',
+					slot: 'action',
+					width: 150,
+					align: 'center'
+				}
+			],
+			data: [],
+			total:1
+		},
+		mounted() {
+			this.updateTable();
+		},
+		methods: {
+			updateTable() {
+				this.data=wt.get("/backstage_api/sys/get_task_list");
+				this.total=this.data.length;
+			},
+			changePage(page) {
+				//console.log(page)
+			},
+			run(index){
+				let res=wt.get('/backstage_api/sys/run_task',{task:this.data[index].name});
+				if(res=='true'){
+					this.$Message.success(this.data[index].name+'已运行！');
+					this.updateTable();
+				}else{
+					this.$Message.error(this.data[index].name+'运行失败！');
+				}
+			},
+			stop(index){
+				let res=wt.get('/backstage_api/sys/stop_task',{task:this.data[index].name});
+				if(res=='true'){
+					this.$Message.success(this.data[index].name+'已终止！');
+					this.updateTable();
+				}else{
+					this.$Message.error(this.data[index].name+'终止失败！');
+				}
+			}
+        }
+	});
+</script>
+</html>
